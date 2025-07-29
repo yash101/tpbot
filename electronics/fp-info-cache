@@ -1,4 +1,4 @@
-25611199132710310
+25619966389106396
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -6555,6 +6555,13 @@ Capacitor_Tantalum_SMD
 CP_EIA-7361-438_AVX-U_HandSolder
 Tantalum Capacitor SMD AVX-U (7361-438 Metric), IPC-7352 nominal, (Body size from: http://datasheets.avx.com/NOS.pdf), generated with kicad-footprint-generator
 capacitor tantalum
+0
+2
+2
+Connector
+BATT_CONNECTOR
+
+
 0
 2
 2
@@ -60213,6 +60220,20 @@ Fuse Fuseholder TR5 Littelfuse/Wickmann No. 460 No560
 0
 2
 2
+Fuse
+Untitled
+
+
+0
+2
+2
+Fuse
+XFCN XF-508P-A-B
+
+
+0
+4
+2
 Heatsink
 Heatsink_35x26mm_1xFixation3mm_Fischer-SK486-35
 Heatsink, 35mm x 26mm, 1x Fixation 3mm, Fischer SK486-35
@@ -68011,6 +68032,13 @@ Arduino UNO R3
 0
 32
 32
+Module
+BTT-TMC5160PRO-v1.0
+
+
+0
+18
+18
 Module
 BeagleBoard_PocketBeagle
 PocketBeagle, https://github.com/beagleboard/pocketbeagle/wiki/System-Reference-Manual#71_Expansion_Header_Connectors
@@ -90901,6 +90929,13 @@ ESP32-C3 WROOM-02 espressif
 0
 40
 19
+RF_Module
+ESP32-C5-DevKitC-1-v1.2
+
+
+0
+32
+32
 RF_Module
 ESP32-C6-MINI-1
 2.4 GHz Wi-Fi, Bluetooth, Zigbee and Thread combo chip, external antenna, https://www.espressif.com/sites/default/files/documentation/esp32-c6-mini-1_mini-1u_datasheet_en.pdf

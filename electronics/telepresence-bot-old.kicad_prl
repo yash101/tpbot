@@ -1,8 +1,8 @@
 {
   "board": {
-    "active_layer": 6,
-    "active_layer_preset": "",
-    "auto_track_width": false,
+    "active_layer": 0,
+    "active_layer_preset": "All Layers",
+    "auto_track_width": true,
     "hidden_netclasses": [],
     "hidden_nets": [],
     "high_contrast_mode": 0,
@@ -49,7 +49,7 @@
       "conflict_shadows",
       "shapes"
     ],
-    "visible_layers": "00000000_00000000_55555555_d75555f5",
+    "visible_layers": "ffffffff_ffffffff_ffffffff_ffffffff",
     "zone_display_mode": 0
   },
   "git": {
@@ -58,7 +58,7 @@
     "ssh_key": ""
   },
   "meta": {
-    "filename": "telepresence-bot.kicad_prl",
+    "filename": "telepresence-bot-old.kicad_prl",
     "version": 5
   },
   "net_inspector_panel": {
