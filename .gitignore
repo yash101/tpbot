@@ -1,2 +1,7 @@
 *.lck
+*.bkp
+.DS_Store
+*.zip
 electronics/telepresence-bot-backups/
+
+*auto_saved_files*
