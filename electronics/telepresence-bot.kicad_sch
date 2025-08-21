@@ -7750,22 +7750,22 @@
 		(uuid "85ec54a5-6773-4ed0-930c-eef6dd60d688")
 	)
 	(label "DRIVER_SDO"
-		(at 191.77 39.37 90)
+		(at 191.77 39.37 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify right bottom)
 		)
 		(uuid "86c88925-d4b3-40f5-9b13-c1d8ac841e04")
 		(property "ALT" "MISO"
-			(at 192.278 36.068 90)
+			(at 187.96 40.132 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 					(italic yes)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
 	)
@@ -8172,6 +8172,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 213.36 16.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "18"
 			(uuid "627b8f33-de03-40eb-b1cf-871b6c1a6828")
 		)
@@ -8323,6 +8332,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 67.31 173.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 67.31 173.99 0)
 			(effects
 				(font
@@ -8485,6 +8503,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 158.75 134.62 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "5e295127-c247-4b2b-a8ad-fa7c1cfa1c74")
 		)
@@ -8550,6 +8577,15 @@
 		)
 		(property "Description" "0.2A Ic, 40V Vce, Small Signal NPN Transistor, TO-92"
 			(at 153.67 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
+			(at 153.67 104.14 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8646,6 +8682,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 30.48 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1c9a65ac-3617-4b0a-813a-23dff84f563b")
 		)
@@ -8681,7 +8726,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "Q_PMOS_GDS"
+		(property "Value" "PMOS_GDS"
 			(at 132.08 102.8699 0)
 			(effects
 				(font
@@ -8709,6 +8754,15 @@
 			)
 		)
 		(property "Description" "P-MOSFET transistor, gate/drain/source"
+			(at 125.73 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "Y"
 			(at 125.73 101.6 0)
 			(effects
 				(font
@@ -8779,6 +8833,15 @@
 			)
 		)
 		(property "Description" "Jumper, 2-pole, closed/bridged"
+			(at 205.74 52.07 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "N"
 			(at 205.74 52.07 0)
 			(effects
 				(font
@@ -8865,6 +8928,15 @@
 			)
 		)
 		(property "V" ""
+			(at 107.95 58.42 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 107.95 58.42 90)
 			(effects
 				(font
@@ -9028,6 +9100,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 151.13 186.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "79149cea-70e6-423a-83f1-2ae99ebff84a")
 		)
@@ -9097,6 +9178,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" ""
+			(at 158.75 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "MP"
 			(uuid "c7b27ee4-5345-48e7-b992-fecf0eb4628c")
 		)
@@ -9155,6 +9245,15 @@
 		)
 		(property "Description" "Resettable fuse, polymeric positive temperature coefficient"
 			(at 129.54 163.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "N"
+			(at 129.54 163.83 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9240,6 +9339,15 @@
 			)
 		)
 		(property "DNP" ""
+			(at 46.99 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 46.99 29.21 0)
 			(effects
 				(font
@@ -9398,6 +9506,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 209.55 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "c9ed0c94-71c6-4d0b-87d0-09b431ff7863")
 		)
@@ -9483,6 +9600,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 196.85 39.37 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "b5a3a99d-5a0a-4268-bae8-36d898245c98")
 		)
@@ -9551,6 +9677,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "N"
+			(at 21.59 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "4a8d0e3a-65b5-4394-bc1e-62143813ec93")
 		)
@@ -9611,6 +9746,15 @@
 			)
 		)
 		(property "Description" "Jumper, 2-pole, closed/bridged"
+			(at 205.74 19.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "N"
 			(at 205.74 19.05 0)
 			(effects
 				(font
@@ -9887,6 +10031,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" ""
+			(at 146.05 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "MP"
 			(uuid "e789bd56-e2c6-4d72-b413-f8d49e67c134")
 		)
@@ -9961,6 +10114,15 @@
 			)
 		)
 		(property "V" ""
+			(at 209.55 147.32 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 209.55 147.32 90)
 			(effects
 				(font
@@ -10122,6 +10284,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 107.95 55.88 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "c609be67-c7a9-4924-b6a2-ef6e0ef9b565")
 		)
@@ -10197,6 +10368,15 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "msrcrt" "Y"
+			(at 144.78 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
 			)
 		)
 		(pin "1"
@@ -10276,6 +10456,15 @@
 			)
 		)
 		(property "V" ""
+			(at 209.55 143.51 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 209.55 143.51 90)
 			(effects
 				(font
@@ -10371,6 +10560,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 175.26 134.62 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "49336444-73b7-4cbf-9b6c-1f2adec36764")
 		)
@@ -10457,6 +10655,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 69.85 181.61 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "4"
 			(uuid "39f749bc-74bf-4343-8afd-5bc954a58d4b")
 		)
@@ -10522,6 +10729,15 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x05, script generated"
+			(at 99.06 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 99.06 53.34 0)
 			(effects
 				(font
@@ -10616,6 +10832,15 @@
 			)
 		)
 		(property "V" ""
+			(at 73.66 127 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 73.66 127 90)
 			(effects
 				(font
@@ -10842,6 +11067,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 107.95 50.8 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "ee213385-e527-488f-8f38-f74d81f20e8c")
 		)
@@ -10922,6 +11156,15 @@
 			)
 		)
 		(property "V" ""
+			(at 154.94 29.21 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 154.94 29.21 90)
 			(effects
 				(font
@@ -11016,6 +11259,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 207.01 90.17 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "40afeda9-ed47-430a-aa61-9c4228f4871e")
 		)
@@ -11077,6 +11329,15 @@
 			)
 		)
 		(property "Description" "Mounting Hole with connection as pad named MP"
+			(at 135.89 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" ""
 			(at 135.89 45.72 0)
 			(effects
 				(font
@@ -11161,6 +11422,15 @@
 			)
 		)
 		(property "V" ""
+			(at 121.92 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 121.92 113.03 0)
 			(effects
 				(font
@@ -11319,6 +11589,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 125.73 25.4 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "b873412a-31d5-470a-8da6-34733309cd8e")
 		)
@@ -11453,6 +11732,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 69.85 166.37 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "ab042983-5bad-4f07-bedd-20fb1d45c738")
 		)
@@ -11539,6 +11827,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 50.8 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "cf4a5379-b7fb-4d8a-8935-ea424c589905")
 		)
@@ -11600,6 +11897,15 @@
 		)
 		(property "Description" "Resettable fuse, polymeric positive temperature coefficient"
 			(at 142.24 184.15 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "N"
+			(at 142.24 184.15 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11669,6 +11975,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 35.56 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" ""
 			(at 35.56 45.72 0)
 			(effects
 				(font
@@ -11823,6 +12138,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 78.74 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "430518a5-0dab-415c-bdba-08d7d1b0ccfd")
 		)
@@ -11903,6 +12227,15 @@
 			)
 		)
 		(property "V" ""
+			(at 167.64 119.38 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 167.64 119.38 90)
 			(effects
 				(font
@@ -12006,6 +12339,15 @@
 				)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 133.35 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "555efd32-0f9b-4e31-9928-0f083981e2cb")
 		)
@@ -12081,6 +12423,15 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "msrcrt" "Y"
+			(at 118.11 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
 			)
 		)
 		(pin "1"
@@ -12342,6 +12693,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 153.67 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 153.67 95.25 0)
 			(effects
 				(font
@@ -12702,6 +13062,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 120.65 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "787e7242-461b-49b2-889c-bc7749703416")
 		)
@@ -12854,6 +13223,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 60.96 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "3"
 			(uuid "6b6685ee-8162-46ce-a87e-2f60f6107b20")
 		)
@@ -12918,6 +13296,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 72.39 173.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 72.39 173.99 0)
 			(effects
 				(font
@@ -13012,6 +13399,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 87.63 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1c9a65ac-3617-4b0a-813a-23dff84f563c")
 		)
@@ -13098,6 +13494,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 107.95 53.34 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "dfe9bd32-5566-4836-a39f-d9da23ad694e")
 		)
@@ -13175,6 +13580,15 @@
 			)
 		)
 		(property "V" ""
+			(at 73.66 129.54 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 73.66 129.54 90)
 			(effects
 				(font
@@ -13271,6 +13685,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 127 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "ab23a0c5-f259-4632-b95d-de95f99de07c")
 		)
@@ -13348,6 +13771,15 @@
 			)
 		)
 		(property "V" ""
+			(at 39.37 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 39.37 167.64 0)
 			(effects
 				(font
@@ -13445,6 +13877,15 @@
 			)
 		)
 		(property "V" ""
+			(at 158.75 142.24 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "Y"
 			(at 158.75 142.24 90)
 			(effects
 				(font
@@ -13607,6 +14048,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "N"
+			(at 113.03 97.79 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "1a852f5d-dcf0-417b-9c18-1122ebb58011")
 		)
@@ -13685,6 +14135,15 @@
 			)
 		)
 		(property "V" ""
+			(at 91.44 107.95 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 91.44 107.95 90)
 			(effects
 				(font
@@ -13773,6 +14232,15 @@
 			)
 		)
 		(property "V" ""
+			(at 118.11 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 118.11 161.29 0)
 			(effects
 				(font
@@ -13916,6 +14384,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" ""
+			(at 156.21 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "MP"
 			(uuid "e789bd56-e2c6-4d72-b413-f8d49e67c136")
 		)
@@ -14002,6 +14479,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 102.87 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "cead6abe-161d-4772-8429-28e4a5b2bf5b")
 		)
@@ -14069,6 +14555,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 179.07 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 179.07 95.25 0)
 			(effects
 				(font
@@ -14304,6 +14799,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 172.72 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "37625de2-5b73-4d58-b343-4f611a9587e4")
 		)
@@ -14382,6 +14886,15 @@
 			)
 		)
 		(property "V" ""
+			(at 66.04 148.59 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 66.04 148.59 90)
 			(effects
 				(font
@@ -14511,6 +15024,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 175.26 142.24 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "ca2eba28-f2c6-4b65-af8d-3f3b64949d51")
 		)
@@ -14577,6 +15099,15 @@
 		)
 		(property "Description" "0.2A Ic, 40V Vce, Small Signal NPN Transistor, TO-92"
 			(at 179.07 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
+			(at 179.07 104.14 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14681,6 +15212,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 160.02 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "06dfd16d-bb81-4ef1-94d4-b81a559598ec")
 		)
@@ -14758,6 +15298,15 @@
 			)
 		)
 		(property "V" ""
+			(at 114.3 107.95 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 114.3 107.95 90)
 			(effects
 				(font
@@ -14845,6 +15394,15 @@
 			)
 		)
 		(property "V" ""
+			(at 172.72 102.87 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 172.72 102.87 90)
 			(effects
 				(font
@@ -15006,6 +15564,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 160.02 102.87 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8889101e-ae71-4bc7-a88a-f2b9ac827824")
 		)
@@ -15092,6 +15659,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "NA"
+			(at 69.85 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "71306ad0-fd83-43ce-afdb-5af0b46ea3bf")
 		)
@@ -15167,6 +15743,15 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "msrcrt" "NA"
+			(at 107.95 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
 			)
 		)
 		(pin "1"
@@ -15387,6 +15972,15 @@
 				(hide yes)
 			)
 		)
+		(property "msrcrt" "Y"
+			(at 99.06 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "3"
 			(uuid "e3c4a1f5-3465-484d-92cf-7472375866cd")
 		)
@@ -15467,6 +16061,15 @@
 			)
 		)
 		(property "V" ""
+			(at 209.55 151.13 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "msrcrt" "NA"
 			(at 209.55 151.13 90)
 			(effects
 				(font

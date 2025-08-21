@@ -1,0 +1,31 @@
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": 8443,
+        "max_connections": 100,
+        "thread_pool_size": 4,
+        "socket_timeout_ms": 30000,
+        "keep_alive_interval_ms": 60000
+    },
+    "dtls": {
+        "certificate_file": "cert.pem",
+        "private_key_file": "key.pem",
+        "verify_client": false,
+        "cipher_list": "ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS",
+        "handshake_timeout_ms": 10000
+    },
+    "logging": {
+        "level": "info",
+        "file": "llbe.log",
+        "console_output": true,
+        "enable_file_logging": true
+    },
+    "webrtc": {
+        "stun_servers": [
+            "stun:stun.l.google.com:19302"
+        ],
+        "turn_servers": [],
+        "ice_timeout_ms": 10000,
+        "enable_datachannel": true
+    }
+}

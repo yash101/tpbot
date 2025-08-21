@@ -1,0 +1,3 @@
+# Ignore jupyter notebook checkpoints and other temporary files
+.ipynb_checkpoints/
+

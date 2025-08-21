@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  llbe:
+    build: .
+    ports:
+      - "8443:8443/udp"
+    volumes:
+      - ./config.json:/app/build/config.json:ro
+      - ./logs:/app/build/logs
+    environment:
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "telepresence_llbe"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
