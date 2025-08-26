@@ -1,13 +1,13 @@
-[submodule "vendor/json"]
+[submodule "llbe/vendor/json"]
 	path = llbe/vendor/json
 	url = https://github.com/nlohmann/json
 	tag = v3.12.0
-[submodule "vendor/libdatachannel"]
+[submodule "llbe/vendor/libdatachannel"]
 	path = llbe/vendor/libdatachannel
 	url = https://github.com/paullouisageneau/libdatachannel.git
 	tag = v0.23.1
 
-[submodule "vendor/googletest"]
+[submodule "llbe/vendor/googletest"]
 	path = llbe/vendor/googletest
 	url = https://github.com/google/googletest.git
 	tag = v1.17.0
