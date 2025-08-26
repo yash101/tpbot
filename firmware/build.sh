@@ -19,7 +19,7 @@ echo "ESP-IDF Version: $(idf.py --version)"
 
 # Set target to ESP32-C5
 echo "Setting target to ESP32-C5..."
-idf.py set-target esp32c5
+idf.py --preview set-target esp32c5
 
 # Clean previous builds
 echo "Cleaning previous builds..."

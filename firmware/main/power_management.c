@@ -9,6 +9,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include <string.h>
+
 static const char *TAG = "POWER_MGMT";
 static power_mgmt_state_t g_power_state = {0};
 static uint32_t g_init_time_ms = 0;
