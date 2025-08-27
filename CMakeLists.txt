@@ -13,13 +13,15 @@ ExternalProject_Add(
         -DCMAKE_RUNTIME_OUTPUT_DIRECTORY:PATH=${CMAKE_BINARY_DIR}/bin
         -DCMAKE_LIBRARY_OUTPUT_DIRECTORY:PATH=${CMAKE_BINARY_DIR}/lib
         -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY:PATH=${CMAKE_BINARY_DIR}/lib
+    INSTALL_COMMAND ""    # <- disable install
 )
 
-# Common options for all children
+# # Common options for all children
 
-ExternalProject_Add(
-    firmware
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/firmware
-    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/firmware-build
-    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/firmware/build.sh
-)
+# ExternalProject_Add(
+#     firmware
+#     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/firmware
+#     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/firmware-build
+#     CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/firmware/build.sh
+#     INSTALL_COMMAND ""    # <- disable install
+# )

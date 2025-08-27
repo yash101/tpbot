@@ -81,19 +81,6 @@ bool Config::validate() const
     return false;
   }
 
-  // Validate DTLS configuration
-  if (dtls.certificate_file.empty())
-  {
-    LOG_ERROR("Certificate file not specified");
-    return false;
-  }
-
-  if (dtls.private_key_file.empty())
-  {
-    LOG_ERROR("Private key file not specified");
-    return false;
-  }
-
   // Validate logging configuration
   if (logging.level != "debug" && logging.level != "info" &&
       logging.level != "warning" && logging.level != "error" &&
@@ -118,11 +105,6 @@ void Config::fromJson(const json &j)
     loadServerConfig(j["server"]);
   }
 
-  if (j.contains("dtls"))
-  {
-    loadDTLSConfig(j["dtls"]);
-  }
-
   if (j.contains("logging"))
   {
     loadLoggingConfig(j["logging"]);
@@ -145,13 +127,6 @@ json Config::toJson() const
   j["server"]["thread_pool_size"] = server.thread_pool_size;
   j["server"]["socket_timeout_ms"] = server.socket_timeout_ms;
   j["server"]["keep_alive_interval_ms"] = server.keep_alive_interval_ms;
-
-  // DTLS configuration
-  j["dtls"]["certificate_file"] = dtls.certificate_file;
-  j["dtls"]["private_key_file"] = dtls.private_key_file;
-  j["dtls"]["verify_client"] = dtls.verify_client;
-  j["dtls"]["cipher_list"] = dtls.cipher_list;
-  j["dtls"]["handshake_timeout_ms"] = dtls.handshake_timeout_ms;
 
   // Logging configuration
   j["logging"]["level"] = logging.level;
@@ -193,30 +168,6 @@ void Config::loadServerConfig(const json &j)
   if (j.contains("keep_alive_interval_ms"))
   {
     server.keep_alive_interval_ms = j["keep_alive_interval_ms"];
-  }
-}
-
-void Config::loadDTLSConfig(const json &j)
-{
-  if (j.contains("certificate_file"))
-  {
-    dtls.certificate_file = j["certificate_file"];
-  }
-  if (j.contains("private_key_file"))
-  {
-    dtls.private_key_file = j["private_key_file"];
-  }
-  if (j.contains("verify_client"))
-  {
-    dtls.verify_client = j["verify_client"];
-  }
-  if (j.contains("cipher_list"))
-  {
-    dtls.cipher_list = j["cipher_list"];
-  }
-  if (j.contains("handshake_timeout_ms"))
-  {
-    dtls.handshake_timeout_ms = j["handshake_timeout_ms"];
   }
 }
 

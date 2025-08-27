@@ -7,8 +7,6 @@ include(GoogleTest)
 # Test executable: include test sources plus the libllbe object files
 add_executable(llbe_tests
     test_config.cpp
-#    test_dtls_server.cpp
-    test_connection_handler.cpp
     test_logger.cpp
     $<TARGET_OBJECTS:libllbe>
 )
