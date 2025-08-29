@@ -6,6 +6,8 @@
 #include <thread>
 #include <chrono>
 
+#include <rtc/rtc.hpp>
+
 #include "config.hpp"
 #include "logger.hpp"
 
@@ -111,6 +113,8 @@ int main(int argc, char *argv[])
   std::signal(SIGTERM, signalHandler);
 
   // Start WebRTC and UDP services
+  rtc::InitLogger(rtc::LogLevel::Info);
+  rtc::
 
   // Cleanup
   Logger::getInstance().close();
