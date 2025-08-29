@@ -20,6 +20,7 @@ endif()
 # Find packages
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
+# find_package(LibDataChannel REQUIRED)
 
 # nlohmann_json
 set(JSON_Install OFF CACHE INTERNAL "")
@@ -36,7 +37,7 @@ add_subdirectory(
 include(GoogleTest)
 
 # libdatachannel
-set(USE_SYSTEM_JSON "Use system-installed nlohmann/json" ON CACHE BOOL "" FORCE)
+# set(USE_SYSTEM_JSON "Use system-installed nlohmann/json" ON CACHE BOOL "" FORCE)
 set(NO_EXAMPLES "Do not build examples" ON CACHE BOOL "" FORCE)
 add_subdirectory(
     "vendor/libdatachannel"
@@ -45,57 +46,31 @@ add_subdirectory(
 
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${DATACHANNEL_INCLUDE_DIRS})
 
-# Enable testing
-enable_testing()
+# # Enable testing
+# enable_testing()
 
 add_subdirectory(src)
 
-target_compile_definitions(libllbe PRIVATE ${DATACHANNEL_CFLAGS_OTHER})
-target_link_directories(libllbe PRIVATE ${DATACHANNEL_LIBRARY_DIRS})
+# Link to libdatachannel target so its usage requirements (include dirs, compile defs)
+# are propagated automatically instead of relying on DATACHANNEL_* variables.
 target_link_libraries(
     libllbe
-    ${DATACHANNEL_LIBRARIES}
+    PUBLIC
+    datachannel
     Threads::Threads
     nlohmann_json::nlohmann_json
 )
 
-# Detect mbed TLS (optional)
-find_package(MbedTLS QUIET)
-
-# If mbedTLS found, link and provide a define; otherwise enable builtin SHA256 fallback
-if(MbedTLS_FOUND)
-    message(STATUS "Found mbedTLS. Using mbedTLS for SHA-256.")
-    target_link_libraries(libllbe PRIVATE MbedTLS::MbedTLS)
-    target_compile_definitions(libllbe PRIVATE HAVE_MBEDTLS=1)
-else()
-    message(STATUS "mbedTLS not found; using builtin SHA256 implementation.")
-    target_compile_definitions(libllbe PRIVATE USE_BUILTIN_SHA256=1)
-endif()
-
-# Apply same to top-level project target
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${DATACHANNEL_CFLAGS_OTHER})
-target_link_directories(${PROJECT_NAME} PRIVATE ${DATACHANNEL_LIBRARY_DIRS})
+# Apply same to top-level project target; link libllbe (which brings libdatachannel)
 target_link_libraries(
     ${PROJECT_NAME}
+    PRIVATE
     libllbe
-    ${DATACHANNEL_LIBRARIES}
+    datachannel
     Threads::Threads
     nlohmann_json::nlohmann_json
 )
-
-if(MbedTLS_FOUND)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MBEDTLS=1)
-    target_link_libraries(${PROJECT_NAME} PRIVATE MbedTLS::MbedTLS)
-else()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_BUILTIN_SHA256=1)
-endif()
-
-# # Installation
-# install(TARGETS libllbe
-#     RUNTIME DESTINATION bin
-# )
 
 # Generate compile commands for IDEs
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

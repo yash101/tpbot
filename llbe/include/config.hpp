@@ -15,6 +15,7 @@ public:
   struct ServerConfig
   {
     std::string address = "wss://be.tpbod.devya.sh:443";
+    std::string password = "changeme";
   };
 
   struct LoggingConfig

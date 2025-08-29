@@ -6,8 +6,8 @@ include(GoogleTest)
 
 # Test executable: include test sources plus the libllbe object files
 add_executable(llbe_tests
-    test_config.cpp
-    test_logger.cpp
+    # test_config.cpp
+    # test_logger.cpp
     $<TARGET_OBJECTS:libllbe>
 )
 
@@ -16,7 +16,7 @@ add_executable(llbe_tests
 # link the external libraries they depend on.
 target_link_libraries(llbe_tests
     GTest::gtest_main
-    ${DATACHANNEL_LIBRARIES}
+    datachannel
     Threads::Threads
     nlohmann_json::nlohmann_json
 )

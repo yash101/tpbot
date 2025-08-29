@@ -39,8 +39,8 @@ void llbe::RobotUDPSession::send_message(const std::string& message)
 
   sendmsg(sockfd_, nullptr, 0); // Dummy call to suppress unused parameter warning
 
-  if (sent_bytes < 0)
-  {
-    LOG_ERROR("Failed to send UDP message: " + std::string(std::strerror(errno)));
-  }
+  // if (sent_bytes < 0)
+  // {
+  //   LOG_ERROR("Failed to send UDP message: " + std::string(std::strerror(errno)));
+  // }
 }

@@ -62,25 +62,6 @@ bool Config::saveToFile(const std::string &filename) const
 
 bool Config::validate() const
 {
-  // Validate server configuration
-  if (server.port <= 0 || server.port > 65535)
-  {
-    LOG_ERROR("Invalid server port: " + std::to_string(server.port));
-    return false;
-  }
-
-  if (server.max_connections <= 0)
-  {
-    LOG_ERROR("Invalid max_connections: " + std::to_string(server.max_connections));
-    return false;
-  }
-
-  if (server.thread_pool_size <= 0)
-  {
-    LOG_ERROR("Invalid thread_pool_size: " + std::to_string(server.thread_pool_size));
-    return false;
-  }
-
   // Validate logging configuration
   if (logging.level != "debug" && logging.level != "info" &&
       logging.level != "warning" && logging.level != "error" &&
@@ -121,12 +102,8 @@ json Config::toJson() const
   json j;
 
   // Server configuration
-  j["server"]["host"] = server.host;
-  j["server"]["port"] = server.port;
-  j["server"]["max_connections"] = server.max_connections;
-  j["server"]["thread_pool_size"] = server.thread_pool_size;
-  j["server"]["socket_timeout_ms"] = server.socket_timeout_ms;
-  j["server"]["keep_alive_interval_ms"] = server.keep_alive_interval_ms;
+  j["server"]["address"] = server.address;
+  j["server"]["password"] = server.password;
 
   // Logging configuration
   j["logging"]["level"] = logging.level;
@@ -145,30 +122,6 @@ json Config::toJson() const
 
 void Config::loadServerConfig(const json &j)
 {
-  if (j.contains("host"))
-  {
-    server.host = j["host"];
-  }
-  if (j.contains("port"))
-  {
-    server.port = j["port"];
-  }
-  if (j.contains("max_connections"))
-  {
-    server.max_connections = j["max_connections"];
-  }
-  if (j.contains("thread_pool_size"))
-  {
-    server.thread_pool_size = j["thread_pool_size"];
-  }
-  if (j.contains("socket_timeout_ms"))
-  {
-    server.socket_timeout_ms = j["socket_timeout_ms"];
-  }
-  if (j.contains("keep_alive_interval_ms"))
-  {
-    server.keep_alive_interval_ms = j["keep_alive_interval_ms"];
-  }
 }
 
 void Config::loadLoggingConfig(const json &j)

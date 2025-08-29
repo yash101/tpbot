@@ -1,4 +1,4 @@
-add_library(libllbe OBJECT
+add_library(libllbe STATIC
     config.cpp
     logger.cpp
     trunk.cpp
@@ -9,5 +9,7 @@ add_library(libllbe OBJECT
 
 add_executable(${PROJECT_NAME}
     main.cpp
-    $<TARGET_OBJECTS:libllbe>
 )
+
+# Link executable to the library so its link interface is used
+target_link_libraries(${PROJECT_NAME} PRIVATE libllbe)

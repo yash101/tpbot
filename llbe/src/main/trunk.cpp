@@ -9,7 +9,8 @@ llbe::BackendConnectivityTrunk::BackendConnectivityTrunk(shared_ptr<Config>& con
   config_(config)
 {
   // Initialize WebSocket connection here using config parameters
-  ws_ = std::make_shared<rtc::WebSocket>(config->server.address);
+  ws_ = std::make_shared<rtc::WebSocket>();
+  ws_->open(config_->server.address);
 }
 
 bool llbe::BackendConnectivityTrunk::connect()
@@ -19,7 +20,8 @@ bool llbe::BackendConnectivityTrunk::connect()
   if (!ws_)
   {
     Logger::getInstance().log(Logger::Level::ERROR, "WebSocket not initialized");
-    ws_ = std::make_shared<rtc::WebSocket>(config_->server.address);
+    ws_ = std::make_shared<rtc::WebSocket>();
+    ws_->open(config_->server.address);
   }
 
   if (ws_->isOpen())

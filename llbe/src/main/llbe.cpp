@@ -8,8 +8,8 @@ using std::string;
 using nlohmann::json;
 
 llbe::LLBE::LLBE(shared_ptr<Config>& config) :
-  trunk_(config),
-  config_(config)
+  config_(config),
+  trunk_(config)
 {
   for (auto& ice : config_->webrtc.stun_servers)
     rtc_config_.iceServers.emplace_back(rtc::IceServer(ice));
@@ -108,7 +108,7 @@ void llbe::LLBE::handleMessageFromTrunk(rtc::message_variant& msg)
 
       // clean up connection, mutex protected, single writer
       {
-        std::unique_lock(session_peers_mutex_);
+        std::unique_lock lck(session_peers_mutex_);
         auto it = session_peers_.find(sessionid);
         if (it != session_peers_.end())
         {
@@ -121,7 +121,7 @@ void llbe::LLBE::handleMessageFromTrunk(rtc::message_variant& msg)
 
     pc->onDataChannel([this, sessionid](std::shared_ptr<rtc::DataChannel> dc) {
       LOG_INFO("DataChannel opened for session " + sessionid + ", label: " + dc->label());
-      std::unique_lock(session_datachannels_mutex_);
+      std::unique_lock lck(session_datachannels_mutex_);
       if (session_datachannels_.find(sessionid) != session_datachannels_.end())
       {
         LOG_WARNING("DataChannel for session " + sessionid + " already exists, overwriting");
@@ -145,7 +145,7 @@ void llbe::LLBE::handleMessageFromTrunk(rtc::message_variant& msg)
 
     // Store the PeerConnection (Mutex protected, single writer)
     {
-      std::unique_lock(session_peers_mutex_);
+      std::unique_lock lck(session_peers_mutex_);
       session_peers_[sessionid] = pc;
     }
   }
@@ -159,7 +159,7 @@ void llbe::LLBE::handleMessageFromTrunk(rtc::message_variant& msg)
     string sdpMid = j.value("sdpMid", "");
 
     {
-      std::unique_lock(session_peers_mutex_);
+      std::unique_lock lck(session_peers_mutex_);
       auto it = session_peers_.find(sessionid);
       if (it == session_peers_.end())
       {

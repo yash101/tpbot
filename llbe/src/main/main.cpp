@@ -11,7 +11,6 @@
 #include "config.hpp"
 #include "logger.hpp"
 
-
 namespace
 {
   void signalHandler(int signal)
@@ -114,10 +113,9 @@ int main(int argc, char *argv[])
 
   // Start WebRTC and UDP services
   rtc::InitLogger(rtc::LogLevel::Info);
-  rtc::
 
   // Cleanup
-  Logger::getInstance().close();
+  Logger::getInstance().initialize("llbe.log", Logger::Level::INFO, true);
 
   return 0;
 }
