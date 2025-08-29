@@ -9,6 +9,7 @@
 #include "config.hpp"
 #include "logger.hpp"
 
+
 namespace
 {
   void signalHandler(int signal)
@@ -19,16 +20,16 @@ namespace
   void printUsage(const char *program_name)
   {
     std::cout << "Usage: " << program_name << " [OPTIONS]\n"
-      << "Options:\n"
-      << "  -c, --config FILE    Configuration file path (default: config.json)\n"
-      << "  -h, --help          Show this help message\n"
-      << "  -v, --version       Show version information\n";
+              << "Options:\n"
+              << "  -c, --config FILE    Configuration file path (default: config.json)\n"
+              << "  -h, --help          Show this help message\n"
+              << "  -v, --version       Show version information\n";
   }
 
   void printVersion()
   {
     std::cout << "Telepresence Low Latency Backend (LLBE) v1.0.0\n"
-      << "Built with C++20 and libdatachannel\n";
+              << "Built with C++20 and libdatachannel\n";
   }
 }
 
@@ -38,11 +39,10 @@ int main(int argc, char *argv[])
 
   // Parse command line arguments
   static struct option long_options[] = {
-    {"config", required_argument, 0, 'c'},
-    {"help", no_argument, 0, 'h'},
-    {"version", no_argument, 0, 'v'},
-    {0, 0, 0, 0}
-  };
+      {"config", required_argument, 0, 'c'},
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}};
 
   int option_index = 0;
   int c;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
   if (!config)
   {
     std::cerr << "Failed to load configuration from " << config_file
-      << ", using defaults" << std::endl;
+              << ", using defaults" << std::endl;
     config = Config::createDefault();
   }
 

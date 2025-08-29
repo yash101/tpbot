@@ -1,4 +1,4 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.0.4 Chrome/138.0.7204.97 Electron/37.2.1 Safari/537.36" version="28.0.4" pages="5">
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.0.4 Chrome/138.0.7204.97 Electron/37.2.1 Safari/537.36" version="28.0.4" pages="6">
   <diagram name="Overall Architecture" id="FfH4SfIc7zyHaF40ghCk">
     <mxGraphModel dx="960" dy="661" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
@@ -144,7 +144,7 @@
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="skXs4nW94kaeDCWXh7ZH" name="Data Flow">
+  <diagram id="skXs4nW94kaeDCWXh7ZH" name="Network Overview">
     <mxGraphModel dx="2678" dy="1108" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
@@ -559,6 +559,113 @@
           <mxGeometry x="467" width="213" height="120" as="geometry">
             <mxRectangle width="213" height="120" as="alternateBounds" />
           </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="8JIf-jE0GwBa2afki1hX" name="Data Flow">
+    <mxGraphModel dx="2946" dy="1219" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-3" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-1" target="-TM_RU4Vkln1QD3040Fe-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-13" value="i2c" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" connectable="0" parent="-TM_RU4Vkln1QD3040Fe-3">
+          <mxGeometry x="0.025" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-6" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=none;startFill=0;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-1" target="-TM_RU4Vkln1QD3040Fe-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-14" value="SPI Chaining MOSI" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" connectable="0" parent="-TM_RU4Vkln1QD3040Fe-6">
+          <mxGeometry x="-0.1024" y="-1" relative="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-1" value="ESP32-C5" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="480" y="840" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-2" value="INA228&lt;div&gt;BMIC&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="680" y="840" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-9" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=none;startFill=0;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-4" target="-TM_RU4Vkln1QD3040Fe-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-4" value="TMC5160" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="480" y="1000" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-7" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=none;startFill=0;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-5" target="-TM_RU4Vkln1QD3040Fe-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-5" value="TMC5160" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1000" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-11" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=none;startFill=0;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-8" target="-TM_RU4Vkln1QD3040Fe-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-8" value="TMC5160" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="280" y="1000" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-12" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=none;startFill=0;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-10" target="-TM_RU4Vkln1QD3040Fe-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-15" value="SPI Chaining MISO" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" connectable="0" parent="-TM_RU4Vkln1QD3040Fe-12">
+          <mxGeometry x="0.2291" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-10" value="TMC5160" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1000" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-25" value="UDP" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-16" target="-TM_RU4Vkln1QD3040Fe-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-27" value="WebSocket" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-16" target="-TM_RU4Vkln1QD3040Fe-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-16" value="LLBE" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="480" y="680" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-26" value="Backend" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="480" y="520" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-29" value="WebSocket / REST" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-28" target="-TM_RU4Vkln1QD3040Fe-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-30" value="WebRTC" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-28" target="-TM_RU4Vkln1QD3040Fe-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-32" value="WebRTC" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-28" target="-TM_RU4Vkln1QD3040Fe-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xpzkjIRRyvtTh-ujzNWc-4" value="WebRTC" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-28" target="xpzkjIRRyvtTh-ujzNWc-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-28" value="Frontend&lt;div&gt;(Operator)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="120" y="520" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-33" value="WebRTC" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="-TM_RU4Vkln1QD3040Fe-31" target="-TM_RU4Vkln1QD3040Fe-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-TM_RU4Vkln1QD3040Fe-31" value="Robot Laptop" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="120" y="760" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="xpzkjIRRyvtTh-ujzNWc-8" value="WebSocket" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="xpzkjIRRyvtTh-ujzNWc-1" target="-TM_RU4Vkln1QD3040Fe-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xpzkjIRRyvtTh-ujzNWc-1" value="Frontend&lt;div&gt;(Viewer)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="120" y="200" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="xpzkjIRRyvtTh-ujzNWc-6" value="WebRTC" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="xpzkjIRRyvtTh-ujzNWc-3" target="xpzkjIRRyvtTh-ujzNWc-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xpzkjIRRyvtTh-ujzNWc-7" value="WebRTC / WebSocket" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=classic;startFill=1;endArrow=classic;" edge="1" parent="1" source="xpzkjIRRyvtTh-ujzNWc-3" target="-TM_RU4Vkln1QD3040Fe-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xpzkjIRRyvtTh-ujzNWc-3" value="Deathstar /&lt;div&gt;WebRTC Video Mux&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" vertex="1" parent="1">
+          <mxGeometry x="120" y="360" width="120" height="80" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

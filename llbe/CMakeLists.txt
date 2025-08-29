@@ -61,6 +61,20 @@ target_link_libraries(
     nlohmann_json::nlohmann_json
 )
 
+# Detect mbed TLS (optional)
+find_package(MbedTLS QUIET)
+
+# If mbedTLS found, link and provide a define; otherwise enable builtin SHA256 fallback
+if(MbedTLS_FOUND)
+    message(STATUS "Found mbedTLS. Using mbedTLS for SHA-256.")
+    target_link_libraries(libllbe PRIVATE MbedTLS::MbedTLS)
+    target_compile_definitions(libllbe PRIVATE HAVE_MBEDTLS=1)
+else()
+    message(STATUS "mbedTLS not found; using builtin SHA256 implementation.")
+    target_compile_definitions(libllbe PRIVATE USE_BUILTIN_SHA256=1)
+endif()
+
+# Apply same to top-level project target
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${DATACHANNEL_CFLAGS_OTHER})
 target_link_directories(${PROJECT_NAME} PRIVATE ${DATACHANNEL_LIBRARY_DIRS})
 target_link_libraries(
@@ -70,6 +84,13 @@ target_link_libraries(
     Threads::Threads
     nlohmann_json::nlohmann_json
 )
+
+if(MbedTLS_FOUND)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MBEDTLS=1)
+    target_link_libraries(${PROJECT_NAME} PRIVATE MbedTLS::MbedTLS)
+else()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_BUILTIN_SHA256=1)
+endif()
 
 # # Installation
 # install(TARGETS libllbe

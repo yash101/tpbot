@@ -14,12 +14,7 @@ class Config
 public:
   struct ServerConfig
   {
-    std::string host = "0.0.0.0";
-    int port = 8443;
-    int max_connections = 100;
-    int thread_pool_size = 4;
-    int socket_timeout_ms = 30000;
-    int keep_alive_interval_ms = 60000;
+    std::string address = "wss://be.tpbod.devya.sh:443";
   };
 
   struct LoggingConfig
