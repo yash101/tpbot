@@ -24,6 +24,10 @@ namespace llbe
     void handleMessageFromTrunk(rtc::message_variant& msg);
   
   private:
+    void handleSdpMessage(const json& j);
+    void handleIceCandidateMessage(const json& j);
+
+  private:
     bool running_ = false;
     std::shared_ptr<Config> config_;
 
