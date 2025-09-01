@@ -2,10 +2,10 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Wifi, WifiOff, Loader2, AlertTriangle } from "lucide-react"
-import { useWebSocketContext } from "./websocket-provider"
 
 export function ConnectionStatus() {
-  const { isConnected, connectionStatus } = useWebSocketContext()
+  // Placeholder while engineering how this will work
+  const connectionStatus: string = 'temp';
 
   const getStatusIcon = () => {
     switch (connectionStatus) {

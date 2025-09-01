@@ -3,11 +3,11 @@ import { UserRole } from "./user";
 
 export class SessionManager {
   private sessions = new Map<string, Session>();
-  private wsToSession = new Map<Bun.ServerWebSocket, string>();
+  private wsToSession = new Map<Bun.ServerWebSocket<unknown>, string>();
   private idCounter = 0;
   private robots = new Map<string, Session>(); // Map of robotId to Session
 
-  createSession(socket: Bun.ServerWebSocket): Session {
+  createSession(socket: Bun.ServerWebSocket<unknown>): Session {
     const sessionId = `session-${this.idCounter++}`;
     const session = new Session(this);
     session.ws = socket;
@@ -22,7 +22,7 @@ export class SessionManager {
     return this.sessions.get(sessionId);
   }
   
-  getSessionByWs(ws: WebSocket): Session | undefined {
+  getSessionByWs(ws: Bun.ServerWebSocket<unknown>): Session | undefined {
     const sessionId = this.wsToSession.get(ws);
     if (sessionId) {
       return this.sessions.get(sessionId);
@@ -56,7 +56,7 @@ export class SessionManager {
 export class Session {
   sessionManager: SessionManager;
   sessionId: string;
-  ws: Bun.ServerWebSocket | null = null;
+  ws: Bun.ServerWebSocket<unknown> | null = null;
 
   username: string | null = null;
   name: string = 'New User';
@@ -78,15 +78,24 @@ export class Session {
     }
   }
 
-  async onMessage2(data: string | Buffer<ArrayBufferLike>) {
-    const message = JSON.parse(data.toString());
-    console.info("Received message from client:", message);
-
+  async onMessage2(message: any) {
     switch (message.type) {
       case 'ping':
         this.send({ type: 'pong', timestamp: Date.now() });
         break;
       case 'user:auth':
+        // Handle authentication
+        // check if already authenticated
+        if (this.username) {
+          this.send({
+            type: 'user:auth',
+            success: true,
+            name: this.name,
+            role: this.role
+          });
+          return;
+        }
+
         const { username, password } = message;
         let user;
         try {
@@ -94,7 +103,7 @@ export class Session {
         } catch (e) {
           console.error("Authentication error:", e);
           this.send({
-            type: 'auth',
+            type: 'user:auth',
             success: false
           });
           return;
@@ -274,7 +283,7 @@ export class Session {
           [UserRole.ADMIN, UserRole.USER].includes(user.role as UserRole);
 
         if (this.role === UserRole.ROBOT_LAPTOP) {
-          this.robotId = 
+          // this.robotId = 
         }
 
         this.send({

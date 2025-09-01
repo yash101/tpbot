@@ -23,7 +23,6 @@ import {
   Eye,
   Monitor,
 } from "lucide-react"
-import { useWebSocketContext } from "./websocket-provider"
 
 interface Robot {
   id: string
@@ -93,7 +92,7 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
   const hasControl = controlledRobot === viewingRobot
   const canRequestControl = user.role !== "guest" && viewedRobot?.controller === null
 
-  const { sendMessage } = useWebSocketContext()
+  const sendMessge = () => {}; // Placeholder for sending messages to backend
 
   useEffect(() => {
     const interval = setInterval(() => {

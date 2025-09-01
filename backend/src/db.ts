@@ -20,7 +20,28 @@
 
 import { sql, SQL } from 'bun';
 
-const db = new SQL(process.env.DATABASE_URL!);
+const db = new SQL(process.env.DATABASE_URL || 'postgresql://tpbot:password123@pg.srv1.devya.sh/test-tpbot-0');
+
+// Create tables
+async function createTables() {
+  try {
+    await db.connect();
+    await db`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        name VARCHAR(255) DEFAULT 'spongebob',
+        role VARCHAR(50) NOT NULL DEFAULT 'guest'
+      )
+    `;
+  } catch (e) {
+    console.error('Failed to connect to database. Die.', e);
+    process.exit(1);
+  }
+}
+
+const ready = createTables();
 
 export async function authenticateUser({
   username,
@@ -33,7 +54,7 @@ export async function authenticateUser({
   name: string;
   role: string;
 } | null> {
-  const hash = await Bun.password.hash(password);
+  await ready;
 
   const query = await db`
     SELECT *
@@ -42,10 +63,16 @@ export async function authenticateUser({
     LIMIT 1
   `;
 
-  if (query.length === 0) {
+  // our sneaky way of reset password is just set password to null via PgAdmin lol
+  // our sneaky way of creating a new user is just try to login with a new username
+  // this is NOT how you should do it in a real app, obviously
+  if (query.length === 0 || query[0].password_hash === null) {
+    const hash = await Bun.password.hash(password);
     await db`
       INSERT INTO users (username, password_hash, name, role)
       VALUES (${username}, ${hash}, 'New User', 'guest')
+      ON CONFLICT (username) DO UPDATE
+      SET password_hash = EXCLUDED.password_hash
     `;
 
     return {
@@ -76,6 +103,8 @@ export async function updateUser({
   name?: string;
   password?: string;
 }): Promise<void> {
+  await ready;
+
   // get the current user data
   const query = await db`
     SELECT *
@@ -89,18 +118,17 @@ export async function updateUser({
   }
 
   const user = query[0];
-  if (!name)
-    name = user.name;
 
-  if (password) {
-    password = await Bun.password.hash(password);
-  } else {
-    password = user.password_hash;
-  }
+  const updatedName = name ?? user.name;
+  const updatedPasswordHash = password
+    ? await Bun.password.hash(password)
+    : user.password_hash;
 
   await db`
     UPDATE users
-    SET name = ${name}, password_hash = ${password}
+    SET
+      name = ${updatedName},
+      password_hash = ${updatedPasswordHash}
     WHERE username = ${username}
   `;
 }
