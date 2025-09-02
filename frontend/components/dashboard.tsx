@@ -3,32 +3,32 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { LogOut, Settings, Users, Activity } from "lucide-react"
+import { LogOut, Users, Activity, BotIcon } from "lucide-react"
 import { RobotControlInterface } from "@/components/robot-control-interface"
 import { AdminDashboard } from "@/components/admin-dashboard"
 import { SystemStatus } from "@/components/system-status"
 import { ConnectionStatus } from "@/components/connection-status"
+import { UserInfo, UserRole } from "@/service/types"
 
 interface DashboardProps {
-  user: {
-    username: string
-    role: "guest" | "user" | "admin" | "robot"
-  }
+  user: UserInfo
   onLogout: () => void
 }
 
 export function Dashboard({ user, onLogout }: DashboardProps) {
-  const [activeView, setActiveView] = useState<"robots" | "admin" | "status">("robots")
+  const [activeView, setActiveView] = useState<
+    "robots" | "admin" | "status"
+  >("robots")
 
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleBadgeVariant = (role: UserRole | null) => {
     switch (role) {
-      case "admin":
+      case UserRole.ADMIN:
         return "destructive"
-      case "user":
+      case UserRole.USER:
         return "default"
-      case "guest":
+      case UserRole.GUEST:
         return "secondary"
-      case "robot":
+      case UserRole.ROBOT:
         return "outline"
       default:
         return "secondary"
@@ -51,7 +51,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">Welcome, {user.username}</span>
             <Button variant="outline" size="sm" onClick={onLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4 mr-1" />
               Logout
             </Button>
           </div>
@@ -66,8 +66,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
             onClick={() => setActiveView("robots")}
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Robot Control
+            <BotIcon className="h-4 w-4 mr-1" />
+            Robot
           </Button>
 
           {user.role === "admin" && (
@@ -76,7 +76,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               onClick={() => setActiveView("admin")}
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
             >
-              <Users className="h-4 w-4 mr-2" />
+              <Users className="h-4 w-4 mr-1" />
               Admin Panel
             </Button>
           )}
@@ -86,7 +86,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
             onClick={() => setActiveView("status")}
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
           >
-            <Activity className="h-4 w-4 mr-2" />
+            <Activity className="h-4 w-4 mr-1" />
             System Status
           </Button>
         </div>
@@ -95,8 +95,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       {/* Main Content */}
       <main className="p-6">
         {activeView === "robots" && <RobotControlInterface user={user} />}
-        {activeView === "admin" && user.role === "admin" && <AdminDashboard />}
-        {activeView === "status" && <SystemStatus />}
+        {/* {activeView === "admin" && user.role === "admin" && <AdminDashboard />}
+        {activeView === "status" && <SystemStatus />} */}
       </main>
     </div>
   )

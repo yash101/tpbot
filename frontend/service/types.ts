@@ -4,3 +4,9 @@ export enum UserRole {
   ADMIN = 'admin',
   ROBOT = 'robot',
 };
+
+export type UserInfo = {
+  username: string | null;
+  role: UserRole | null;
+  name: string | null;
+}

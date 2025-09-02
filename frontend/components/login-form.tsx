@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Monitor, Shield, User, Bot } from "lucide-react"
+import { Monitor } from "lucide-react"
 
 interface LoginFormProps {
   onLogin: (username: string, password: string, remember: boolean) => void
@@ -20,7 +20,11 @@ interface LoginFormProps {
   loginFailed?: boolean
 }
 
-export function LoginForm({ onLogin, initialValues }: LoginFormProps) {
+export function LoginForm({
+  onLogin,
+  initialValues,
+  loginFailed,
+}: LoginFormProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
@@ -43,7 +47,7 @@ export function LoginForm({ onLogin, initialValues }: LoginFormProps) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        {initialValues?.username && initialValues?.password && (
+        { (loginFailed) && (
           <div className="text-red-500 text-center py-2">
         Login failed. Please check your credentials.
           </div>

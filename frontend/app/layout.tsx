@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { RealtimeProvider } from '@/service/providers'
+import { Toaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
   title: 'v0 App',
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <RealtimeProvider>
           {children}
+          <Toaster />
           <Analytics />
         </RealtimeProvider>
       </body>

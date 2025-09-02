@@ -117,14 +117,14 @@ export class Session {
             [UserRole.ADMIN, UserRole.USER].includes(user.role as UserRole);
 
           this.send({
-            type: 'auth',
+            type: 'user:auth',
             success: true,
             name: this.name,
             role: this.role
           });
         } else {
           this.send({
-            type: 'auth',
+            type: 'user:auth',
             success: false
           });
         }

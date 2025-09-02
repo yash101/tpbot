@@ -5,25 +5,19 @@ import { LoginForm } from "@/components/login-form"
 import { Dashboard } from "@/components/dashboard"
 import { useRealtime, useSignal } from "@/service/providers"
 import { Status } from "@/service/RealtimeClient"
-import { UserRole } from "@/service/types"
+import { UserInfo, UserRole } from "@/service/types"
+import { toast } from "@/hooks/use-toast"
 
 export default function Home() {
   const rt = useRealtime();
   const wsConnected = useSignal(rt.status);
   const auth = useSignal(rt.getSignal('user:auth'));
-
-  const [ userInfo, setUserInfo ] = useState<{
-    username: string;
-    role: UserRole;
-    name: string;
-  } | null>(null);
-
+  const [ userInfo, setUserInfo ] = useState<UserInfo | null>(null);
   const [ creds, setCreds ] = useState<{
     username: string
     password: string
     remember?: boolean
   } | null>(null);
-
   const [ loginFailed, setLoginFailed ] = useState(false);
 
   // Load saved credentials once on mount (only if no creds in state)
@@ -61,26 +55,39 @@ export default function Home() {
     // Authenticate with the API when websocket is connected and we have creds
     // only if we don't already have a logged-in user.
     if (wsConnected === Status.CONNECTED && creds && !userInfo?.username) {
-      console.log("Authenticating with saved credentials", creds.username);
+      console.debug("Authenticating with saved credentials", creds.username);
       rt.send({
         type: 'user:auth',
         username: creds.username,
         password: creds.password,
       });
     }
-  }, [wsConnected, creds, rt]);
+  }, [ wsConnected, creds, rt ]);
 
   useEffect(() => {
-    if (auth?.success) {
+    if (auth && auth.success === true) {
       setLoginFailed(false);
       setUserInfo({
-        username: auth.username,
+        username: creds?.username || null,
         role: auth.role,
         name: auth.name,
       });
-    } else {
+      toast({
+        title: 'Login successful',
+        description: `Welcome back, ${auth.name || auth.username || 'user'}!`,
+        duration: 4000,
+      });
+    } else if (auth && auth.success === false) {
       setLoginFailed(true);
+      setUserInfo(null);
+      toast({
+        title: 'Login Failed',
+        description: `Please try again!`,
+        variant: 'destructive',
+        duration: 4000,
+      });
     }
+    // Do not set loginFailed if auth is undefined or null
   }, [ auth ]);
 
   const handleLogin = (username: string, password: string, remember: boolean) => {
@@ -89,10 +96,12 @@ export default function Home() {
 
   const handleLogout = () => {
     setCreds(null);
+    setUserInfo(null);
     localStorage.removeItem("telepresence-robot-credentials");
     rt.reconnect();
-    // Log out from websocket
   }
+
+  console.debug("User info:", userInfo);
 
   if (!userInfo?.username) {
     // Not logged in
@@ -103,5 +112,5 @@ export default function Home() {
     />
   }
 
-  return <Dashboard user={{username: 'placeholder', role: 'admin'}} onLogout={handleLogout} />
+  return <Dashboard user={userInfo} onLogout={handleLogout} />
 }

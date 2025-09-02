@@ -68,7 +68,7 @@ export class RealtimeClient {
         if (type && type in this.signalMap) {
           this.signalMap[type].set(msg);
         } else {
-          console.warn("⚠️ No signal for message type", type, msg);
+          console.debug("⚠️ No signal for message type", type, msg);
         }
       } catch (e) {
         console.error("Failed to parse message", e);
