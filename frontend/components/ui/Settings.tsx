@@ -28,15 +28,30 @@ import {
 import { useRealtime, useSignal } from "@/service/providers"
 import { toast } from "@/hooks/use-toast"
 
+export type RobotRegisters = {
+  chips: Array<{
+    id: string;
+    name: string;
+    registers: Array<{
+      addr: string;
+      value: string;
+      name: string | null;
+      ro: boolean | null;
+    }>;
+  }>;
+}
+
 export function Settings() {
   const rt = useRealtime()
 
   const userAuth = useSignal(rt.getSignal("user:auth"))
   const robots = useSignal(rt.getSignal("robot:list")) || []
   const robotTelemetry = useSignal(rt.getSignal("robot:telemetry")) || {}
-  const robotRegisters = useSignal(rt.getSignal('robot:telemetry_registers'));
+  const robotRegisters = useSignal<RobotRegisters>(
+    rt.getSignal('robot:telemetry_registers')
+  ); // Of type RobotRegisters
 
-  const [webrtcConfig, setWebrtcConfig] = useState(); // Dummy for now
+  const [webrtcConfig, setWebrtcConfig] = useState<{ iceServers: string; sdpSemantics: string }>({ iceServers: 'stun:stun.l.google.com:19302', sdpSemantics: 'unified-plan' }); // Dummy for now
 
   const [name, setName] = useState<string | null>(userAuth?.name || null)
   const [selectedRobot, setSelectedRobot] = useState<string | null>(
@@ -119,21 +134,59 @@ export function Settings() {
     });
   }
 
-  // Dummy registers state (TMC5160 and INA228)
-  const [tmcRegisters, setTmcRegisters] = useState<Array<{ name: string; addr: string; value: string }>>([
-    { name: "TORQUE", addr: "0x01", value: "0x0000" },
-    { name: "VELOCITY", addr: "0x02", value: "0x0000" },
-  ]);
+  // Registers provided from the realtime signal
+  // Expected shape: { chips: [{ id, name, registers: [{ addr, value, name?, ro? }] }] }
+  // robotRegisters may be null/undefined until the server provides it.
 
-  const [inaRegisters, setInaRegisters] = useState<Array<{ name: string; addr: string; value: string }>>([
-    { name: "VIN", addr: "0x10", value: "0x0000" },
-    { name: "IIN", addr: "0x11", value: "0x0000" },
-  ]);
+  // Request registers when selected robot changes
+  useEffect(() => {
+    if (selectedRobot) {
+      rt.send({ type: "robot:get_registers", robot: selectedRobot })
+    }
+  }, [selectedRobot])
 
-  function writeRegister(chip: "tmc" | "ina", addr: string, value: string) {
+  // Populate dummy registers so UI shows something while backend is absent.
+  useEffect(() => {
+    // Create sample registers for two common chips
+    const dummy = {
+      chips: [
+        {
+          id: "tmc5160",
+          name: "TMC5160",
+          registers: [
+            { addr: "0x01", value: "0x0001", name: "TORQUE", ro: false },
+            { addr: "0x02", value: "0x0000", name: "VELOCITY", ro: false },
+            { addr: "0x03", value: "0x00FF", name: "STATUS", ro: true },
+          ],
+        },
+        {
+          id: "ina228",
+          name: "INA228",
+          registers: [
+            { addr: "0x10", value: "0x1A2B", name: "VIN", ro: true },
+            { addr: "0x11", value: "0x00C8", name: "IIN", ro: true },
+            { addr: "0x12", value: "0x0000", name: "CONFIG", ro: false },
+          ],
+        },
+      ],
+    }
+
+    // Set the dummy registers into the realtime signal so the Settings UI can read them
+    try {
+      rt.getSignal("robot:telemetry_registers").set(dummy)
+    } catch (e) {
+      // ignore if signal not available
+      console.debug("Failed to set dummy registers", e)
+    }
+  }, [])
+
+  // local edits: map of `${chipId}:${addr}` -> editedValue
+  const [registerEdits, setRegisterEdits] = useState<Record<string, string>>({})
+
+  function writeRegister(chipId: string, addr: string, value: string) {
     if (!selectedRobot) return
-    rt.send({ type: "robot:write_register", robot: selectedRobot, chip, addr, value })
-    toast({ title: "Write queued", description: `${chip} ${addr} ← ${value}`, duration: 2500 })
+    rt.send({ type: "robot:write_register", robot: selectedRobot, chip: chipId, addr, value })
+    toast({ title: 'Pushed register update', description: `${chipId} ${addr} ← ${value}`, duration: 2500 })
   }
 
   return (
@@ -240,59 +293,67 @@ export function Settings() {
           </div>
 
           <div>
-            <h4 className="font-medium mb-2">Registers (TMC5160)</h4>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Addr</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tmcRegisters.map((r) => (
-                  <TableRow key={r.addr}>
-                    <TableCell>{r.name}</TableCell>
-                    <TableCell>{r.addr}</TableCell>
-                    <TableCell>
-                      <Input value={r.value} onChange={(e) => setTmcRegisters((s) => s.map(x => x.addr === r.addr ? { ...x, value: e.target.value } : x))} />
-                    </TableCell>
-                    <TableCell>
-                      <Button onClick={() => writeRegister('tmc', r.addr, r.value)}>Write</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium">Device Registers</h4>
+            </div>
 
-          <div>
-            <h4 className="font-medium mb-2">Registers (INA228)</h4>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Addr</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inaRegisters.map((r) => (
-                  <TableRow key={r.addr}>
-                    <TableCell>{r.name}</TableCell>
-                    <TableCell>{r.addr}</TableCell>
-                    <TableCell>
-                      <Input value={r.value} onChange={(e) => setInaRegisters((s) => s.map(x => x.addr === r.addr ? { ...x, value: e.target.value } : x))} />
-                    </TableCell>
-                    <TableCell>
-                      <Button onClick={() => writeRegister('ina', r.addr, r.value)}>Write</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {(!robotRegisters || !robotRegisters.chips || robotRegisters.chips.length === 0) && (
+              <div className="text-sm text-muted-foreground">No registers available for this robot.</div>
+            )}
+
+            {(robotRegisters?.chips || []).map((chip) => (
+              <div key={chip.id} className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <div className="text-sm font-medium">{chip.name || chip.id}</div>
+                    <div className="text-xs text-muted-foreground">Device ID: {chip.id}</div>
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Addr</TableHead>
+                      <TableHead>Current Value</TableHead>
+                      <TableHead>New Value</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(chip.registers || []).map((reg) => {
+                      const key = `${chip.id}:${reg.addr}`
+                      const edited = registerEdits[key]
+                      const isRo = reg.ro === true
+                      return (
+                        <TableRow key={key}>
+                          <TableCell>{reg.name || "UNKNOWN"}</TableCell>
+                          <TableCell>{reg.addr}</TableCell>
+                          <TableCell><div className="font-mono">{String(reg.value)}</div></TableCell>
+                          <TableCell>
+                            <Input
+                              value={edited ?? String(reg.value ?? "")}
+                              onChange={(e) => setRegisterEdits((s) => ({ ...s, [key]: e.target.value }))}
+                              readOnly={isRo}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => writeRegister(chip.id, reg.addr, registerEdits[key] ?? String(reg.value ?? ""))}
+                                disabled={isRo}
+                              >
+                                Write
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
