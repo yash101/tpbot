@@ -26,6 +26,7 @@ import {
 import { UserInfo, UserRole } from "@/service/types"
 import { useRealtime, useSignal } from "@/service/providers"
 import { RobotList } from "./ui/RobotList"
+import Settings from "./ui/Settings"
 
 interface RobotControlInterfaceProps {
   user: UserInfo
@@ -39,12 +40,29 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
   // const robotTelemetry = useSignal(rt.getSignal('robot:telemetry'));
   const assignedRobot = useSignal(rt.getSignal('robot:assigned'));
   const hasRobotControl = useSignal(rt.getSignal('robot:control'));
+  const isEmergencyStopped = useSignal(rt.getSignal('robot:emergency_stop'));
+  const telemetry = useSignal(rt.getSignal('robot:telemetry'));
+
+  const currentRobot = (robots as Array<any> || []).find(r => r?.id === assignedRobot?.id) || {};
 
   // TODO: remove these. They are for testing (mocks)
   const hasControl = true;
   // user.role = UserRole.USER; // for testing
+  currentRobot.controled_by = 'dkjhgklsghjkl';
+  currentRobot.status = 'active';
+  currentRobot.name = 'Telepresence Robot 1';
 
-  const currentRobot = (robots as Array<any> || []).find(r => r?.id === assignedRobot?.id);
+  if (telemetry) {
+    telemetry.batteryVoltage = 29.712;
+    telemetry.signalStrength = 0.75;
+    telemetry.speedLeft = 0.5;
+    telemetry.speedRight = 0.5;
+    telemetry.batteryCurrent = 6.4;
+    telemetry.ampHours = 5.340;
+    telemetry.eStopped = false;
+    telemetry.hvEnabled = true;
+    telemetry.driversEnabled = true;
+  }
 
   // Send requests to get initial data
   useEffect(() => {
@@ -58,6 +76,7 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
     rt.getSignal('user:party_membership').set({
       id: 'party1',
     });
+    rt.getSignal('robot:telemetry').set({});
   }, []);
 
   // Keyboad control
@@ -90,7 +109,6 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
   //   return () => window.removeEventListener("keydown", handleKeyDown);
   // }, []);
 
-
   return (
     <div className="space-y-6">
 
@@ -98,18 +116,25 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
       <RobotList user={user} />
 
       <Tabs defaultValue="video" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="video">Video Feed</TabsTrigger>
-          { user.role === UserRole.ADMIN && <TabsTrigger value="configuration">Robot Configuration</TabsTrigger> }
-          <TabsTrigger value="control" disabled={!hasControl}>
-            Robot Control{" "}
-            {hasControl && (
-              <Badge variant="secondary" className="ml-2">
-                Active
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className='flex items-start justify-between'>
+          <TabsList>
+            <TabsTrigger value="video">Video Feed</TabsTrigger>
+            { user.role === UserRole.ADMIN && <TabsTrigger value="config">Settings</TabsTrigger> }
+          </TabsList>
+          <div className={[].join(' ')}>
+            {/* this contains buttons for controlling the robot */}
+            <Button variant={"outline"} size="sm">Request Control</Button>
+            <Button
+              variant={"destructive"}
+              size="sm"
+              className="ml-2"
+              // disabled={isEmergencyStopped?.is_stopped && hasRobotControl?.can_control !== true}
+              onClick={() => {}}
+            >
+              { isEmergencyStopped?.is_stopped ? 'Reset E-Stop' : 'Emergency Stop' }
+            </Button>
+          </div>
+        </div>
 
         <TabsContent value="video">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -149,16 +174,16 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
                     {new Date().toLocaleTimeString()}
                   </div>
 
-                  {/* <div className="absolute top-4 right-4 flex gap-2">
+                  <div className="absolute top-4 right-4 flex gap-2">
                     <div className="bg-black/50 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
                       <Battery className="h-3 w-3" />
-                      {Math.round(viewedRobot?.battery || 0)}%
+                      {Math.round(currentRobot?.battery || 0)}%
                     </div>
                     <div className="bg-black/50 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
                       <Wifi className="h-3 w-3" />
-                      {Math.round(viewedRobot?.signal || 0)}%
+                      {Math.round(currentRobot?.signal || 0)}%
                     </div>
-                  </div> */}
+                  </div>
 
                   <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded text-xs">
                     <Users className="h-3 w-3 inline mr-1" />
@@ -172,7 +197,7 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
               <CardHeader>
                 <CardTitle>Live Telemetry</CardTitle>
               </CardHeader>
-              {/* <CardContent className="space-y-4">
+              <CardContent className="space-y-4">
                 <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted rounded">
                   <Users className="h-3 w-3 inline mr-1" />
                   Telemetry shared with party members
@@ -180,93 +205,27 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Battery Level</span>
-                    <span>{Math.round(viewedRobot?.battery || 0)}%</span>
+                    <span>Battery Voltage</span>
+                    <span>{Math.round((telemetry?.batteryVoltage || 0) * 100.0) / 100.0}%</span>
                   </div>
-                  <Progress value={viewedRobot?.battery || 0} className="h-2" />
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Signal Strength</span>
-                    <span>{Math.round(viewedRobot?.signal || 0)}%</span>
-                  </div>
-                  <Progress value={viewedRobot?.signal || 0} className="h-2" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Speed</span>
-                    <p className="font-mono">{viewedRobot?.telemetry.speed.toFixed(1)} m/s</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Heading</span>
-                    <p className="font-mono">{Math.round(viewedRobot?.telemetry.heading || 0)}°</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Altitude</span>
-                    <p className="font-mono">{viewedRobot?.telemetry.altitude.toFixed(1)} m</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Temperature</span>
-                    <p className="font-mono">{viewedRobot?.telemetry.temperature.toFixed(1)}°C</p>
+                    <span>{Math.round(telemetry?.signalStrength * 100 || 0)}%</span>
                   </div>
                 </div>
-
-                <div className="pt-4 border-t">
-                  {!hasControl ? (
-                    <div className="text-center space-y-3">
-                      {canRequestControl ? (
-                        <>
-                          <p className="text-sm text-muted-foreground">
-                            Request control to operate {viewedRobot?.name}
-                          </p>
-                          <Button onClick={handleRequestControl} size="sm" className="w-full">
-                            <Hand className="h-4 w-4 mr-2" />
-                            Request Control
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-sm text-muted-foreground">
-                            {viewedRobot?.controller
-                              ? `${viewedRobot.controller} is controlling this robot`
-                              : user.role === "guest"
-                                ? "Guests can view but not control robots"
-                                : "Robot is not available for control"}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center space-y-2">
-                      <Badge variant="default" className="flex items-center gap-1 w-fit mx-auto">
-                        <Hand className="h-3 w-3" />
-                        You have control
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        onClick={handleReleaseControl}
-                        size="sm"
-                        className="w-full bg-transparent"
-                      >
-                        <Square className="h-4 w-4 mr-2" />
-                        Release Control
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent> */}
+              </CardContent>
             </Card>
           </div>
         </TabsContent>
 
 
-        {/*
-
-<TabsContent value="configuration">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {partyRobots.map((robot) => (
+        <TabsContent value="config">
+          <Settings />
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {robots.map((robot: any) => (
               <Card key={robot.id} className={viewingRobot === robot.id ? "ring-2 ring-primary" : ""}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-base">
@@ -318,10 +277,12 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </div> */}
         </TabsContent>
 
 
+
+{/*
         <TabsContent value="control">
           <Card>
             <CardHeader>
