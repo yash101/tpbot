@@ -1,11 +1,9 @@
 'use client';
 
-import { WebRTCManager } from "@/service/webrtc/WebRTCManager";
 import { RealtimeClient } from "@/service/RealtimeClient";
 import React, { useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 
 const RTContext = React.createContext<RealtimeClient | null>(null);
-const WebRTCContext = React.createContext<WebRTCManager | null>(null);
 
 export function RealtimeProvider({
   children,
@@ -40,14 +38,4 @@ export function useSignal<T>(sig: {
     sig.get.bind(sig),
     sig.get.bind(sig),
   );
-}
-
-export function WebRTCProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const rtc = useMemo(() => new WebRTCManager(useRealtime()), []);
-
-  return <WebRTCContext.Provider value={rtc}>{children}</WebRTCContext.Provider>;
 }

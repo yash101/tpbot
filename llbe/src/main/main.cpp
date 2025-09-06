@@ -3,13 +3,12 @@
 #include <csignal>
 #include <string>
 #include <getopt.h>
-#include <thread>
-#include <chrono>
 
 #include <rtc/rtc.hpp>
 
 #include "config.hpp"
 #include "logger.hpp"
+#include "llbe.hpp"
 
 namespace
 {
@@ -107,15 +106,21 @@ int main(int argc, char *argv[])
   LOG_INFO("Starting Telepresence LLBE v1.0.0");
   LOG_INFO("Configuration loaded from: " + config_file);
 
-  // Set up signal handlers
-  std::signal(SIGINT, signalHandler);
-  std::signal(SIGTERM, signalHandler);
+  // // Set up signal handlers
+  // std::signal(SIGINT, signalHandler);
+  // std::signal(SIGTERM, signalHandler);
 
   // Start WebRTC and UDP services
   rtc::InitLogger(rtc::LogLevel::Info);
 
   // Cleanup
   Logger::getInstance().initialize("llbe.log", Logger::Level::INFO, true);
+
+  config->server.address = "ws://localhost:8080"; // For testing with local backend
+
+  llbe::LLBE llbe_instance(config);
+  llbe_instance.start();
+  llbe_instance.joinWorkerThread();
 
   return 0;
 }

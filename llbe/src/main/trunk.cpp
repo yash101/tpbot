@@ -10,14 +10,16 @@ llbe::BackendConnectivityTrunk::BackendConnectivityTrunk(shared_ptr<Config>& con
 {
   // Initialize WebSocket connection here using config parameters
   ws_ = std::make_shared<rtc::WebSocket>();
+  ws_->close();
   ws_->open(config_->server.address);
+  std::cout << "WebSocket initialized to " << config_->server.address << std::endl;
 }
 
 bool llbe::BackendConnectivityTrunk::connect()
 {
   std::lock_guard<std::mutex> lock(ws_mutex_);
 
-  if (!ws_)
+  if (!ws_ || ws_->isClosed())
   {
     Logger::getInstance().log(Logger::Level::ERROR, "WebSocket not initialized");
     ws_ = std::make_shared<rtc::WebSocket>();
@@ -30,24 +32,23 @@ bool llbe::BackendConnectivityTrunk::connect()
   ws_->onOpen([this]() {
     Logger::getInstance().log(Logger::Level::INFO, "WebSocket connection opened");
     json j = {
-      { "type", "register" },
-      { "role", "llbe" },
-      { "token", config_->server.address } // TODO: use proper auth token
+      { "type", "user:auth" },
+      { "username", "llbe" },
+      { "password", config_->server.password } // TODO: use proper auth token
     };
 
     std::lock_guard<std::mutex> lock(ws_mutex_);
     ws_->send(j.dump());
   });
 
-  ws_->onClosed([this]() {
+  ws_->onClosed([]() {
     Logger::getInstance().log(Logger::Level::WARNING, "WebSocket connection closed");
   });
 
-  ws_->onError([this](std::string error) {
+  ws_->onError([](std::string error) {
     Logger::getInstance().log(Logger::Level::ERROR, "WebSocket error: " + error);
   });
 
-  ws_->open(config_->server.address);
   return true;
 }
 
@@ -94,7 +95,10 @@ void llbe::BackendConnectivityTrunk::backgroundTask()
     if (isConnected())
     {
       std::lock_guard<std::mutex> lock(ws_mutex_);
-      ws_->send("{\"type\":\"heartbeat\"}");
+      json j = {
+        { "type", "ping" }
+      };
+      ws_->send(j.dump());
     }
     
     eb_timeout_ = std::chrono::seconds(EB_MIN_TIMEOUT_SEC);

@@ -21,19 +21,6 @@ export class RealtimeClient {
   private maxBackoff = 10000;
   private signalMap: { [key: string]: Signal<any> } = {};
 
-  readonly assignedParty = new Signal<string | null>(null);
-  readonly assignedRobot = new Signal<string | null>(null);
-
-  readonly linkStats = new Signal<{
-    snr: number;
-    retrans: number;
-    rssi: number;
-  }>({
-    snr: 0,
-    retrans: 0,
-    rssi: 0,
-  });
-
   readonly status = new Signal<Status>(Status.CLOSED);
 
   constructor(url: string) {

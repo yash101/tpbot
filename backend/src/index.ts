@@ -4,6 +4,11 @@ const sessionManager: SessionManager = new SessionManager();
 
 const WsServer = Bun.serve({
   fetch(req, server) {
+    console.log("New connection attempt");
+    if (req.headers.get("upgrade") !== "websocket") {
+      return new Response("Expected WebSocket", { status: 400 });
+    }
+    
     const success = server.upgrade(req);
     if (!success) {
       return new Response("Not a valid WebSocket request", { status: 400 });
@@ -28,7 +33,7 @@ const WsServer = Bun.serve({
       // Now handle the session
       const session = sessionManager.getSessionByWs(ws);
       if (session) {
-        session.onMessage2(message);
+        session.onMessage(message);
       } else {
         console.warn("⚠️ Received message for unknown session");
         ws.close(1008, "Unknown session"); // 1008 = policy violation

@@ -6,10 +6,11 @@ export class SessionManager {
   private wsToSession = new Map<Bun.ServerWebSocket<unknown>, string>();
   private idCounter = 0;
   private robots = new Map<string, Session>(); // Map of robotId to Session
+  private llbeSession: Session | null = null; // Session for LLBE connection
 
   createSession(socket: Bun.ServerWebSocket<unknown>): Session {
     const sessionId = `session-${this.idCounter++}`;
-    const session = new Session(this);
+  const session = new Session(this, sessionId);
     session.ws = socket;
     
     this.sessions.set(sessionId, session);
@@ -40,6 +41,14 @@ export class SessionManager {
     }
   }
 
+  getLLBEConnection(): Session | null {
+    return this.llbeSession;
+  }
+
+  setLlbeSession(session: Session | null) {
+    this.llbeSession = session;
+  }
+
   getRobotSession(robotId: string): Session | undefined {
     return this.robots.get(robotId);
   }
@@ -64,6 +73,7 @@ export class Session {
   robotId: string | null = null;
   controlledRobot: string | null = null;
   canRequestControl: boolean = true; // New property to manage control request ability
+  party: string | null = null; // Party ID for grouping users and robots
 
   closeCallbacks: ((s: Session) => void)[] = [];
 
@@ -78,58 +88,71 @@ export class Session {
     }
   }
 
-  async onMessage2(message: any) {
-    switch (message.type) {
-      case 'ping':
-        this.send({ type: 'pong', timestamp: Date.now() });
-        break;
-      case 'user:auth':
-        // Handle authentication
-        // check if already authenticated
-        if (this.username) {
-          this.send({
-            type: 'user:auth',
-            success: true,
-            name: this.name,
-            role: this.role
-          });
-          return;
-        }
+  async onMessage(message: any) {
+    if (message.type === 'ping') {
+      this.send({
+        type: 'ping:resp',
+        timestamp: Date.now(),
+        incomingTimestamp: message.timestamp,
+        ...message
+      });
 
-        const { username, password } = message;
-        let user;
-        try {
-          user = await authenticateUser({ username, password });
-        } catch (e) {
-          console.error("Authentication error:", e);
-          this.send({
-            type: 'user:auth',
-            success: false
-          });
-          return;
-        }
+      return;
+    } else if (message.type === 'user:auth') {
+      // Handle authentication
+      // check if already authenticated
+      if (this.username) {
+        this.send({
+          type: 'user:auth',
+          success: true,
+          name: this.name,
+          role: this.role
+        });
+        return;
+      }
 
-        if (user) {
-          this.username = user.username;
-          this.name = user.name;
-          this.role = user.role;
-          this.canRequestControl =    // Make this a DB column?
-            [UserRole.ADMIN, UserRole.USER].includes(user.role as UserRole);
+      const {
+        username,
+        password
+      } = message;
 
-          this.send({
-            type: 'user:auth',
-            success: true,
-            name: this.name,
-            role: this.role
-          });
-        } else {
-          this.send({
-            type: 'user:auth',
-            success: false
-          });
-        }
-        break;
-      default: break;
+      let user;
+      try {
+        user = await authenticateUser({ username, password });
+      } catch (e) {
+        console.error("Authentication error:", e);
+        this.send({
+          type: 'user:auth',
+          success: false
+        });
+        return;
+      }
+
+      if (!user) {
+        this.send({
+          type: 'user:auth',
+          success: false
+        });
+        return;
+      }
+
+      this.username = user.username;
+      this.name = user.name;
+      this.role = user.role;
+      this.canRequestControl =    // Make this a DB column?
+        [UserRole.ADMIN, UserRole.USER].includes(user.role as UserRole);
+
+      if (user.role === UserRole.LLBE) {
+        this.sessionManager.setLlbeSession(this);
+      }
+
+      this.send({
+        type: 'user:auth',
+        success: true,
+        name: this.name,
+        role: this.role
+      });
+      return;
     }
 
     // Ensure the user is authenticated for other message types
@@ -139,6 +162,7 @@ export class Session {
         success: false,
         error: 'Not authenticated'
       });
+      console.warn("Unauthenticated message received, closing session");
       this.close();
       return;
     }
@@ -165,6 +189,10 @@ export class Session {
       }
     }
 
+    // Handle signalling messages
+    if (await this.handleWebrtcMessage(message))
+      return;
+
     // Handle the roles
     switch (this.role) {
       case UserRole.ADMIN:
@@ -179,6 +207,125 @@ export class Session {
       case UserRole.LLBE:
         // LLBE can only send telemetry
         break;
+    }
+  }
+
+  async handleWebrtcMessage(message: any): Promise<boolean> {
+    switch (message.type) {
+      case 'webrtc:sdp': {
+        // If the sender is a regular user/browser and wants to talk to LLBE
+        if (message?.target === 'llbe') {
+          const llbeSession = this.sessionManager.getLLBEConnection();
+          if (!llbeSession) {
+            console.warn('No LLBE session available for webrtc:sdp');
+            this.send({
+              type: 'webrtc:sdp',
+              target: 'llbe',
+              success: false,
+              error: 'No LLBE connection available'
+            });
+            return false;
+          }
+
+          if (!message?.sdp) {
+            console.warn('No SDP in webrtc:sdp message');
+            this.send({
+              type: 'webrtc:sdp',
+              target: 'llbe',
+              success: false,
+              error: 'No SDP provided'
+            });
+            return false;
+          }
+
+          // Forward to LLBE and include the originating session id so LLBE can reply
+          llbeSession.send({
+            type: 'webrtc:sdp',
+            sessionid: this.sessionId,
+            sdp: message.sdp
+          });
+          return true;
+        }
+
+        // Message coming from LLBE (it will not set target='llbe' but will include sessionid)
+        if (this === this.sessionManager.getLLBEConnection()) {
+          const targetSessionId = message?.sessionid || message?.target;
+          if (!targetSessionId) {
+            console.warn('LLBE sdp message missing session id/target');
+            return false;
+          }
+
+          const targetSession = this.sessionManager.getSessionById(targetSessionId);
+          if (!targetSession) {
+            console.warn('No target session for webrtc:sdp message', targetSessionId);
+            return false;
+          }
+
+          // Normalize sdp: if LLBE sent a plain SDP string, wrap into an object the frontend expects
+          let sdpPayload = message.sdp;
+          if (typeof sdpPayload === 'string') {
+            sdpPayload = { type: 'answer', sdp: sdpPayload };
+          }
+
+          targetSession.send({ type: 'webrtc:sdp', sdp: sdpPayload, target: 'llbe' });
+          return true;
+        }
+
+        // Otherwise unsupported routing
+        console.warn('SDP message routing unsupported for this sender/target');
+        return false;
+      }
+      case 'webrtc:ice': {
+        // From browser -> LLBE
+        if (message?.target === 'llbe') {
+          const llbeSession = this.sessionManager.getLLBEConnection();
+          if (!llbeSession) {
+            console.warn('No LLBE session available for webrtc:ice');
+            this.send({ type: 'webrtc:ice', target: 'llbe', success: false, error: 'No LLBE connection available' });
+            return false;
+          }
+
+          // Forward candidate to LLBE including originating session id
+          // Normalize candidate: frontend sends object {candidate, sdpMid, sdpMLineIndex}
+          const candidateStr = message.candidate?.candidate || message.candidate || null;
+          llbeSession.send({
+            type: 'webrtc:ice',
+            sessionid: this.sessionId,
+            candidate: candidateStr,
+            sdpMid: message.candidate?.sdpMid,
+            sdpMLineIndex: message.candidate?.sdpMLineIndex
+          });
+          return true;
+        }
+
+        // From LLBE -> browser
+        if (this === this.sessionManager.getLLBEConnection()) {
+          const targetSessionId = message?.sessionid || message?.target;
+          if (!targetSessionId) {
+            console.warn('LLBE ice message missing session id/target');
+            return false;
+          }
+
+          const targetSession = this.sessionManager.getSessionById(targetSessionId);
+          if (!targetSession) {
+            console.warn('No target session for webrtc:ice message', targetSessionId);
+            return false;
+          }
+
+          // Forward candidate to browser and mark the origin as 'llbe' so frontend can map pc
+          const candObj = (typeof message.candidate === 'string')
+            ? { candidate: message.candidate, sdpMid: message?.sdpMid, sdpMLineIndex: message?.sdpMLineIndex }
+            : message.candidate;
+          targetSession.send({ type: 'webrtc:ice', candidate: candObj, target: 'llbe' });
+          return true;
+        }
+
+        console.warn('ICE message routing unsupported for this sender/target');
+        return false;
+      }
+      default:
+        console.warn('Unknown webrtc message type:', message.type);
+        return false;
     }
   }
 
@@ -245,140 +392,8 @@ export class Session {
       case 'control:release':
         console.log(`Control release for robot by user ${this.username}`);
         break;
-      case 'webrtc:sdp':
-        // Handle SDP message
-        break;
-      case 'webrtc:ice':
-        // Handle ICE candidate message
-        break;
       default:
         console.warn("Unknown user message type:", message.type);
-        break;
-    }
-  }
-
-  async onMessage(data: string | Buffer<ArrayBufferLike>) {
-    const message = JSON.parse(data.toString());
-    console.info("Received message from client:", message);
-
-    if (message.type === 'user:auth') {
-      // Handle authentication
-      const { username, password } = message;
-      let user;
-      try {
-        user = await authenticateUser({ username, password });
-      } catch (e) {
-        console.error("Authentication error:", e);
-        this.send({
-          type: 'auth',
-          success: false
-        });
-        return;
-      }
-      if (user) {
-        this.username = user.username;
-        this.name = user.name;
-        this.role = user.role;
-        this.canRequestControl =    // Make this a DB column?
-          [UserRole.ADMIN, UserRole.USER].includes(user.role as UserRole);
-
-        if (this.role === UserRole.ROBOT_LAPTOP) {
-          // this.robotId = 
-        }
-
-        this.send({
-          type: 'auth',
-          success: true,
-          name: this.name,
-          role: this.role
-        });
-      } else {
-        this.send({
-          type: 'auth',
-          success: false
-        });
-      }
-    }
-
-    // Ensure the user is authenticated for other message types
-    if (!this.username) {
-      this.send({
-        type: message.type,
-        success: false,
-        error: 'Not authenticated'
-      });
-      this.close();
-      return;
-    }
-
-    // Handle different message types
-    switch (message.type) {
-      case 'user:update':
-        // Handle user update
-        try {
-          await updateUser(message);
-          this.send({ type: 'user:update', success: true });
-        } catch (e) {
-          console.error("Error updating user:", e);
-          this.send({ type: 'user:update', success: false });
-        }
-        break;
-      case 'ping':
-        this.send({ type: 'pong' });
-        break;
-      case 'robot:telemetry': // Acceptable: LLBE
-        if (this.role !== 'llbe') {
-          this.send({
-            type: 'robot:telemetry',
-            success: false,
-            error: 'Not authorized'
-          });
-          this.close();
-          return;
-        }
-        
-        // Handle telemetry data
-        const robotId = message.robotId;
-        const data = message.data;
-        
-        // TODO: handle the telemetry data from the robot
-
-        console.log(`Telemetry from robot ${robotId}:`, data);
-        break;
-      case 'control:request':
-        console.log(`Control request for robot by user ${this.username}`);
-
-        // 1. Check if permissions
-        if (!this.canRequestControl) {
-          return this.send({
-            type: 'control:request',
-            success: false,
-            error: 'Not authorized'
-          });
-        }
-
-        // 2. Check if robot is already controlled
-        if (this.controlledRobot) {
-          this.send({
-            type: 'control:request',
-            success: true,
-            error: 'Already controlling a robot'
-          });
-          return;
-        }
-
-        break;
-      case 'control:release':
-        console.log(`Control release for robot by user ${this.username}`);
-        break;
-      case 'webrtc:sdp':
-        // Handle SDP message
-        break;
-      case 'webrtc:ice':
-        // Handle ICE candidate message
-        break;
-      default:
-        console.warn("Unknown message type:", message.type);
         break;
     }
   }

@@ -28,28 +28,76 @@ void llbe::LLBE::start()
 
   running_ = true;
 
+  if (!trunk_.connect())
+  {
+    LOG_ERROR("Failed to connect to backend server at " + config_->server.address);
+    running_ = false;
+    return;
+  }
+
   // Connect to the backend server (trunk)
   std::thread t(&llbe::BackendConnectivityTrunk::backgroundTask, &trunk_);
   worker_trunk_ = std::move(t);
 
   // handle messages from the trunk
-  trunk_.on_message([&](rtc::message_variant msg) {
+  trunk_.on_message([this](rtc::message_variant msg) {
     this->handleMessageFromTrunk(msg);
   });
+}
+
+// Temporary code to allow me to bringup the robot firmware
+void bodgeCode(json j)
+{
+  // get a connected robot (probably just one)
+  int8_t power = j.value("power", 0);
+  int8_t turn = j.value("turn", 0);
+
+  int8_t left_speed = std::clamp(power + turn, -128, 127);
+  int8_t right_speed = std::clamp(power - turn, -128, 127);
+
+  // Build struct, semd via UDP to robot
 }
 
 void llbe::LLBE::handleMessageFromTrunk(rtc::message_variant& msg)
 {
   if (!std::holds_alternative<string>(msg))
     return;
-
+  
   // Handle messages from the trunk here
   string json_str = std::get<string>(msg);
-  json j(json_str);
+  json j = json::parse(json_str, nullptr, false);
 
-  string type = j.value("type", "");
+  if (!j["type"].is_string())
+  {
+    LOG_WARNING("Received message without type from trunk: " + json_str);
+    return;
+  }
 
-  if (type == "webrtc:sdp")
+  string type = j["type"].get<string>();
+
+  if (type == "ping:resp")
+  {
+    // Ignore
+  } else if (type == "ping")
+  {
+    // Respond to ping
+    json resp = {
+      { "type", "ping:resp" },
+      { "timestamp", j.value("timestamp", 0) },
+      { "incomingTimestamp", j.value("timestamp", 0) },
+      { "timestampResp", (int)std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch()).count() }
+    };
+    string resp_str = resp.dump();
+    rtc::message_variant resp_msg = resp_str;
+    trunk_.send(resp_msg);
+  }
+  else if (type == "control")
+  {
+    // Control message for robot
+    bodgeCode(j);
+  }
+  else if (type == "webrtc:sdp")
     handleSdpMessage(j);
   else if (type == "webrtc:ice")
     handleIceCandidateMessage(j);
@@ -71,7 +119,7 @@ void llbe::LLBE::handleSdpMessage(const json& j)
 
   // Recevied SDP from trunk, forwarded from browser client
   string sessionid = j.value("sessionid", "");
-  string sdp = j.value("sdp", "");
+  auto sdp = j["sdp"];
 
   // Create a new PeerConnection for this session
   shared_ptr<rtc::PeerConnection> pc =
@@ -80,7 +128,7 @@ void llbe::LLBE::handleSdpMessage(const json& j)
   // Get a local SDP to send back to the client
   pc->onLocalDescription([this, sessionid](rtc::Description desc) {
     json msg = {
-      { "type", "webrtc:answer" },
+      { "type", "webrtc:sdp" },
       { "sessionid", sessionid },
       { "sdp", string(desc) }
     };
@@ -106,7 +154,15 @@ void llbe::LLBE::handleSdpMessage(const json& j)
     trunk_.send(msg_var);
   });
 
-  pc->setRemoteDescription(rtc::Description(sdp, rtc::Description::Type::Offer));
+  // Assert that sdp.sdp exists and is a string
+  if (sdp.empty() || !sdp["sdp"].is_string())
+  {
+    LOG_WARNING("SDP is empty in message from trunk for session " + sessionid);
+    return;
+  }
+
+  // TODO: if this does not work, perhaps get sdp["sdp"] instead?
+  pc->setRemoteDescription(rtc::Description(sdp["sdp"], rtc::Description::Type::Offer));
   pc->createAnswer();
   pc->onStateChange([this, sessionid](rtc::PeerConnection::State state) {
     LOG_INFO("PeerConnection state for session " + sessionid + ": " + std::to_string(static_cast<int>(state)));
@@ -145,7 +201,7 @@ void llbe::LLBE::handleSdpMessage(const json& j)
     }
     session_datachannels_[sessionid] = dc;
 
-    dc->onMessage([this, sessionid](rtc::message_variant msg) {
+    dc->onMessage([sessionid](rtc::message_variant msg) {
       if (std::holds_alternative<string>(msg))
       {
         string s = std::get<string>(msg);
@@ -157,6 +213,8 @@ void llbe::LLBE::handleSdpMessage(const json& j)
         LOG_INFO("DataChannel binary message from session " + sessionid + ", size=" + std::to_string(b.size()));
       }
     });
+
+    
   });
 
   // Store the PeerConnection (Mutex protected, single writer)

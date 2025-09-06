@@ -22,10 +22,15 @@ namespace llbe
     void shutdown();
 
     void handleMessageFromTrunk(rtc::message_variant& msg);
+    inline void joinWorkerThread()
+    {
+      if (worker_trunk_.joinable())
+        worker_trunk_.join();
+    }
   
   private:
-    void handleSdpMessage(const json& j);
-    void handleIceCandidateMessage(const json& j);
+    void handleSdpMessage(const nlohmann::json& j);
+    void handleIceCandidateMessage(const nlohmann::json& j);
 
   private:
     bool running_ = false;
