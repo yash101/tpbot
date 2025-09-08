@@ -20,7 +20,13 @@
 
 import { sql, SQL } from 'bun';
 
-const db = new SQL(process.env.DATABASE_URL || 'postgresql://tpbot:password123@pg.srv1.devya.sh/test-tpbot-0');
+let dbUrl: string | null = process.env.DATABASE_URL || null;
+// Actual semi-prod database connection string. Kinda ignore the hardcoded password ;)
+// dbUrl = dbUrl || 'postgresql://tpbot:password123@pg.srv1.devya.sh/test-tpbot-0';
+
+// For SpaceX demo (if it'll work)
+dbUrl = dbUrl || 'postgresql://postgres:password@localhost:5432/postgres';
+const db = new SQL(dbUrl);
 
 // Create tables
 async function createTables() {

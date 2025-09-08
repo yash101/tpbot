@@ -95,8 +95,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       {/* Main Content */}
       <main className="p-6">
         {activeView === "robots" && <RobotControlInterface user={user} />}
-        {/* {activeView === "admin" && user.role === "admin" && <AdminDashboard />}
-        {activeView === "status" && <SystemStatus />} */}
+        {activeView === "admin" && user.role === "admin" && <AdminDashboard />}
+        {activeView === "status" && <SystemStatus />}
       </main>
     </div>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UsersIcon, Bot, Settings, Shield, Monitor, Hand, Battery, Wifi, UserX, Plus, Edit } from "lucide-react"
+import { useRealtime, useSignal } from "@/service/providers"
 
 interface AdminUser {
   id: string
@@ -31,6 +32,7 @@ interface Robot {
   controller: string | null
   party: string | null
   location: string
+  lastSeen?: string
 }
 
 interface Party {
@@ -43,101 +45,57 @@ interface Party {
 }
 
 export function AdminDashboard() {
-  const [users, setUsers] = useState<AdminUser[]>([
-    {
-      id: "user-001",
-      username: "john_doe",
-      role: "user",
-      party: "team-alpha",
-      status: "online",
-      lastSeen: "2024-01-15 14:30",
-      controllingRobot: "robot-002",
-    },
-    {
-      id: "user-002",
-      username: "jane_smith",
-      role: "admin",
-      party: "team-beta",
-      status: "online",
-      lastSeen: "2024-01-15 14:25",
-      controllingRobot: null,
-    },
-    {
-      id: "user-003",
-      username: "guest_user",
-      role: "guest",
-      party: "team-alpha",
-      status: "offline",
-      lastSeen: "2024-01-15 13:45",
-      controllingRobot: null,
-    },
-  ])
+  const rt = useRealtime()
+  // Users list not implemented server-side currently; keep empty to avoid mocks
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [robots, setRobots] = useState<Robot[]>([])
+  // Parties from backend are summarized; we'll store minimal info
+  const [parties, setParties] = useState<{ partyId: string; memberCount: number }[]>([])
 
-  const [robots, setRobots] = useState<Robot[]>([
-    {
-      id: "robot-001",
-      name: "Explorer Alpha",
-      status: "online",
-      battery: 85,
-      signal: 92,
-      controller: null,
-      party: "team-alpha",
-      location: "Building A - Floor 2",
-    },
-    {
-      id: "robot-002",
-      name: "Scout Beta",
-      status: "busy",
-      battery: 67,
-      signal: 78,
-      controller: "john_doe",
-      party: "team-beta",
-      location: "Building B - Floor 1",
-    },
-    {
-      id: "robot-003",
-      name: "Guardian Gamma",
-      status: "online",
-      battery: 94,
-      signal: 88,
-      controller: null,
-      party: "team-alpha",
-      location: "Outdoor Area - Zone C",
-    },
-  ])
+  // Subscribe to backend signals
+  const robotListMsg = useSignal(rt.getSignal('robot:list'))
+  const partyListMsg = useSignal(rt.getSignal('party:list'))
 
-  const [parties, setParties] = useState<Party[]>([
-    {
-      id: "team-alpha",
-      name: "Team Alpha",
-      description: "Primary exploration team",
-      members: ["john_doe", "guest_user"],
-      robots: ["robot-001", "robot-003"],
-      createdBy: "jane_smith",
-    },
-    {
-      id: "team-beta",
-      name: "Team Beta",
-      description: "Secondary reconnaissance team",
-      members: ["jane_smith"],
-      robots: ["robot-002"],
-      createdBy: "jane_smith",
-    },
-  ])
+  // Request initial data and periodic refresh
+  useEffect(() => {
+    rt.send({ type: 'robot:list' })
+    rt.send({ type: 'party:list' })
 
-  const [newUser, setNewUser] = useState({
-    username: "",
-    role: "user" as "guest" | "user" | "admin" | "robot",
-    party: "",
-  })
+    const robotsIv = setInterval(() => rt.send({ type: 'robot:list' }), 5000)
+    const partiesIv = setInterval(() => rt.send({ type: 'party:list' }), 10000)
+    return () => { clearInterval(robotsIv); clearInterval(partiesIv) }
+  }, [rt])
 
-  const [newParty, setNewParty] = useState({
-    name: "",
-    description: "",
-  })
+  // Handle incoming robot list
+  useEffect(() => {
+    if (!robotListMsg) return
+    const list = Array.isArray(robotListMsg) ? robotListMsg : robotListMsg.robots
+    if (Array.isArray(list)) {
+      // Normalize fields to Robot type
+      const normalized: Robot[] = list.map((r: any) => ({
+        id: r.id,
+        name: r.name || r.id,
+        status: (r.status || 'offline') as Robot['status'],
+        battery: typeof r.battery === 'number' ? r.battery : 0,
+        signal: typeof r.signal === 'number' ? r.signal : 0,
+        controller: r.controller || null,
+        party: r.party || null,
+        location: r.location || '',
+  lastSeen: r.lastSeen || undefined,
+      }))
+      setRobots(normalized)
+    }
+  }, [robotListMsg])
 
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
-  const [isAddPartyOpen, setIsAddPartyOpen] = useState(false)
+  // Handle incoming party list
+  useEffect(() => {
+    if (!partyListMsg) return
+    if (partyListMsg.success && Array.isArray(partyListMsg.parties)) {
+      setParties(partyListMsg.parties)
+    }
+  }, [partyListMsg])
+
+  // Remove add dialogs and mock creation to avoid fake data
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -182,207 +140,22 @@ export function AdminDashboard() {
     }
   }
 
-  const handleAddUser = () => {
-    if (newUser.username.trim()) {
-      const user: AdminUser = {
-        id: `user-${Date.now()}`,
-        username: newUser.username,
-        role: newUser.role,
-        party: newUser.party || null,
-        status: "offline",
-        lastSeen: new Date().toLocaleString(),
-        controllingRobot: null,
-      }
-      setUsers([...users, user])
-      setNewUser({ username: "", role: "user", party: "" })
-      setIsAddUserOpen(false)
-    }
-  }
+  // User creation not supported via UI; backend recommends updating DB directly.
 
-  const handleAddParty = () => {
-    if (newParty.name.trim()) {
-      const party: Party = {
-        id: `party-${Date.now()}`,
-        name: newParty.name,
-        description: newParty.description,
-        members: [],
-        robots: [],
-        createdBy: "admin",
-      }
-      setParties([...parties, party])
-      setNewParty({ name: "", description: "" })
-      setIsAddPartyOpen(false)
-    }
-  }
+  // Party creation not supported from UI; omitted to avoid mocks.
 
-  const handleAssignUserToParty = (userId: string, partyId: string) => {
-    setUsers(users.map((user) => (user.id === userId ? { ...user, party: partyId || null } : user)))
+  // Assignments disabled until backend endpoints are implemented.
 
-    if (partyId) {
-      setParties(
-        parties.map((party) =>
-          party.id === partyId
-            ? {
-                ...party,
-                members: [
-                  ...party.members.filter((m) => m !== users.find((u) => u.id === userId)?.username),
-                  users.find((u) => u.id === userId)?.username,
-                ].filter(Boolean) as string[],
-              }
-            : { ...party, members: party.members.filter((m) => m !== users.find((u) => u.id === userId)?.username) },
-        ),
-      )
-    }
-  }
+  // Assignments disabled until backend endpoints are implemented.
 
-  const handleAssignRobotToParty = (robotId: string, partyId: string) => {
-    setRobots(robots.map((robot) => (robot.id === robotId ? { ...robot, party: partyId || null } : robot)))
+  // Control assignment/release not wired to backend; disabled for now.
 
-    if (partyId) {
-      setParties(
-        parties.map((party) =>
-          party.id === partyId
-            ? { ...party, robots: [...party.robots.filter((r) => r !== robotId), robotId] }
-            : { ...party, robots: party.robots.filter((r) => r !== robotId) },
-        ),
-      )
-    }
-  }
-
-  const handleForceReleaseControl = (robotId: string) => {
-    const robot = robots.find((r) => r.id === robotId)
-    if (robot?.controller) {
-      setUsers(users.map((user) => (user.username === robot.controller ? { ...user, controllingRobot: null } : user)))
-      setRobots(robots.map((r) => (r.id === robotId ? { ...r, controller: null, status: "online" as const } : r)))
-    }
-  }
-
-  const handleAssignControl = (robotId: string, username: string) => {
-    // Release any existing control
-    setUsers(
-      users.map((user) => ({
-        ...user,
-        controllingRobot: user.controllingRobot === robotId ? null : user.controllingRobot,
-      })),
-    )
-    setRobots(robots.map((robot) => ({ ...robot, controller: robot.id === robotId ? null : robot.controller })))
-
-    // Assign new control
-    if (username) {
-      setUsers(users.map((user) => (user.username === username ? { ...user, controllingRobot: robotId } : user)))
-      setRobots(
-        robots.map((robot) =>
-          robot.id === robotId ? { ...robot, controller: username, status: "busy" as const } : robot,
-        ),
-      )
-    }
-  }
+  // Control assignment not implemented server-side; hidden in UI.
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Admin Dashboard</h2>
-        <div className="flex gap-2">
-          <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UsersIcon className="h-4 w-4 mr-2" />
-                Add User
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New User</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    placeholder="Enter username"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="role">Role</Label>
-                  <Select
-                    value={newUser.role}
-                    onValueChange={(value: "guest" | "user" | "admin" | "robot") =>
-                      setNewUser({ ...newUser, role: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="guest">Guest</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="robot">Robot</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="party">Party (Optional)</Label>
-                  <Select value={newUser.party} onValueChange={(value) => setNewUser({ ...newUser, party: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select party" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Party</SelectItem>
-                      {parties.map((party) => (
-                        <SelectItem key={party.id} value={party.id}>
-                          {party.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={handleAddUser} className="w-full">
-                  Add User
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isAddPartyOpen} onOpenChange={setIsAddPartyOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Party
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Party</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="partyName">Party Name</Label>
-                  <Input
-                    id="partyName"
-                    value={newParty.name}
-                    onChange={(e) => setNewParty({ ...newParty, name: e.target.value })}
-                    placeholder="Enter party name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="partyDescription">Description</Label>
-                  <Input
-                    id="partyDescription"
-                    value={newParty.description}
-                    onChange={(e) => setNewParty({ ...newParty, description: e.target.value })}
-                    placeholder="Enter party description"
-                  />
-                </div>
-                <Button onClick={handleAddParty} className="w-full">
-                  Create Party
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
@@ -401,74 +174,9 @@ export function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Party</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Controlling Robot</TableHead>
-                    <TableHead>Last Seen</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="flex items-center gap-2">
-                        {getRoleIcon(user.role)}
-                        {user.username}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleVariant(user.role)} className="capitalize">
-                          {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={user.party || "none"}
-                          onValueChange={(value) => handleAssignUserToParty(user.id, value)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue placeholder="No party" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No Party</SelectItem>
-                            {parties.map((party) => (
-                              <SelectItem key={party.id} value={party.id}>
-                                {party.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${getStatusColor(user.status)}`} />
-                          <span className="capitalize">{user.status}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {user.controllingRobot ? (
-                          <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                            <Hand className="h-3 w-3" />
-                            {robots.find((r) => r.id === user.controllingRobot)?.name}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">None</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{user.lastSeen}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="text-sm text-muted-foreground">
+                User listing/control is not yet exposed by the backend. Please manage users via the database directly.
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -491,8 +199,7 @@ export function AdminDashboard() {
                     <TableHead>Signal</TableHead>
                     <TableHead>Controller</TableHead>
                     <TableHead>Party</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Last Seen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -511,69 +218,27 @@ export function AdminDashboard() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Battery className="h-4 w-4" />
-                          {Math.round(robot.battery)}%
+                          {typeof robot.battery === 'number' ? Math.round(robot.battery) : 0}%
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Wifi className="h-4 w-4" />
-                          {Math.round(robot.signal)}%
+                          {typeof robot.signal === 'number' ? Math.round(robot.signal) : 0}%
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {robot.controller ? (
-                            <>
-                              <Badge variant="outline" className="flex items-center gap-1">
-                                <Hand className="h-3 w-3" />
-                                {robot.controller}
-                              </Badge>
-                              <Button variant="outline" size="sm" onClick={() => handleForceReleaseControl(robot.id)}>
-                                <UserX className="h-3 w-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <Select value="" onValueChange={(value) => handleAssignControl(robot.id, value)}>
-                              <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Assign" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {users
-                                  .filter((user) => user.role !== "guest" && !user.controllingRobot)
-                                  .map((user) => (
-                                    <SelectItem key={user.id} value={user.username}>
-                                      {user.username}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
+                        {robot.controller ? (
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <Hand className="h-3 w-3" />
+                            {robot.controller}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">None</span>
+                        )}
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={robot.party || "none"}
-                          onValueChange={(value) => handleAssignRobotToParty(robot.id, value)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue placeholder="No party" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No Party</SelectItem>
-                            {parties.map((party) => (
-                              <SelectItem key={party.id} value={party.id}>
-                                {party.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-sm">{robot.location}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          <Settings className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
+                      <TableCell>{robot.party || <span className="text-muted-foreground">None</span>}</TableCell>
+                      <TableCell className="text-sm">{(robot as any).lastSeen || ''}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -585,62 +250,22 @@ export function AdminDashboard() {
         <TabsContent value="parties">
           <div className="grid gap-4">
             {parties.map((party) => (
-              <Card key={party.id}>
+              <Card key={party.partyId}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    <span>{party.name}</span>
-                    <Badge variant="outline">{party.members.length} members</Badge>
+                    <span>{party.partyId}</span>
+                    <Badge variant="outline">{party.memberCount} members</Badge>
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">{party.description}</p>
+                  <p className="text-sm text-muted-foreground">Active party tracked by session manager</p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Members</h4>
-                      <div className="space-y-1">
-                        {party.members.length > 0 ? (
-                          party.members.map((member) => {
-                            const user = users.find((u) => u.username === member)
-                            return (
-                              <div key={member} className="flex items-center gap-2">
-                                {user && getRoleIcon(user.role)}
-                                <span>{member}</span>
-                                {user && (
-                                  <Badge variant={getRoleVariant(user.role)} className="text-xs">
-                                    {user.role}
-                                  </Badge>
-                                )}
-                              </div>
-                            )
-                          })
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No members</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2">Robots</h4>
-                      <div className="space-y-1">
-                        {party.robots.length > 0 ? (
-                          party.robots.map((robotId) => {
-                            const robot = robots.find((r) => r.id === robotId)
-                            return (
-                              <div key={robotId} className="flex items-center gap-2">
-                                <Monitor className="h-4 w-4" />
-                                <span>{robot?.name}</span>
-                                {robot && <div className={`w-2 h-2 rounded-full ${getStatusColor(robot.status)}`} />}
-                              </div>
-                            )
-                          })
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No robots assigned</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Detailed member/robot lists are not exposed by the backend yet.</p>
                 </CardContent>
               </Card>
             ))}
+            {parties.length === 0 && (
+              <div className="text-sm text-muted-foreground">No active parties</div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

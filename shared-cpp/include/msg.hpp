@@ -58,8 +58,42 @@ namespace shr
              header.message_type != MessageHeader::MSG_TYPE_UNDEFINED &&
              header.message_length == sizeof(T) &&
              verify();
-    }
+    } 
   };
+
+  struct __attribute__((packed)) MotorCommand
+  {
+    uint16_t id;
+    int8_t sleft;
+    int8_t sright;
+  };
+
+  struct __attribute__((packed)) MotorConfig
+  {
+    uint16_t id;
+    uint8_t device_id;
+    uint8_t reg_addr;
+    uint32_t regval; // Sometimes used for a register address, big endian (network order)
+
+    static constexpr uint8_t DEVICE_ESP32 = 1;
+    static constexpr uint8_t DEVICE_INA228 = 2;
+    static constexpr uint8_t DEVICE_TMC5160 = 3; // Stepper motor driver, there can be multiple. This value should be dynamic
+
+    static constexpr uint8_t REG_ESP32_LVSHUTDOWN = 1; // uint8_t, 0=normal, 1=low voltage shutdown
+    static constexpr uint8_t REG_ESP32_HVPOWER = 2;
+    static constexpr uint8_t REG_ESP32_DRV_ENABLE = 3;
+    static constexpr uint8_t REG_ESP32_REBOOT = 4;
+
+    // Define these later, no need to build the whole datasheet right here
+    // Just hardcode for now, into its own module, likely on the firmware blob itself
+
+    // INA228 registers
+
+    // TMC5160 registers
+  };
+
+  typedef WireableMessage<MotorCommand> MotorCommandMessage;
+  typedef WireableMessage<MotorConfig> MotorConfigMessage;
 }
 
 #endif // SHAREDCPP_INCLUDE_MSG_HPP

@@ -44,7 +44,7 @@ export const RobotList: React.FC<RobotListProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(robots || []).map((robot: any) => (
+          {(robots?.robots || []).map((robot: any) => (
             <Card
               key={robot.id}
               className={[

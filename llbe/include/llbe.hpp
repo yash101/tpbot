@@ -9,6 +9,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
+#include <atomic>
 
 namespace llbe
 {
@@ -21,7 +22,7 @@ namespace llbe
     void start();
     void shutdown();
 
-    void handleMessageFromTrunk(rtc::message_variant& msg);
+    // void handleMessageFromTrunk(rtc::message_variant& msg);
     inline void joinWorkerThread()
     {
       if (worker_trunk_.joinable())
@@ -53,6 +54,8 @@ namespace llbe
     std::shared_mutex session_datachannels_mutex_;
 
     rtc::Configuration rtc_config_;
+
+    std::atomic<bool> is_logged_in_{false};
   };
 }
 

@@ -30,23 +30,31 @@ bool llbe::BackendConnectivityTrunk::connect()
     return true;
 
   ws_->onOpen([this]() {
-    Logger::getInstance().log(Logger::Level::INFO, "WebSocket connection opened");
-    json j = {
-      { "type", "user:auth" },
-      { "username", "llbe" },
-      { "password", config_->server.password } // TODO: use proper auth token
+    json msg = {
+      {"type", "connection:open"},
     };
-
-    std::lock_guard<std::mutex> lock(ws_mutex_);
-    ws_->send(j.dump());
+    handle_message(msg.dump());
   });
 
-  ws_->onClosed([]() {
+  ws_->onClosed([this]() {
+    json msg = {
+      "type", "connection:closed"      
+    };
     Logger::getInstance().log(Logger::Level::WARNING, "WebSocket connection closed");
+    handle_message(msg.dump());
   });
 
-  ws_->onError([](std::string error) {
+  ws_->onError([this](std::string error) {
+    json msg = {
+      "type", "connection:error",
+      "error", error
+    };
     Logger::getInstance().log(Logger::Level::ERROR, "WebSocket error: " + error);
+    handle_message(msg.dump());
+  });
+
+  ws_->onMessage([this](rtc::message_variant msg) {
+    handle_message(msg);
   });
 
   return true;
@@ -72,6 +80,10 @@ bool llbe::BackendConnectivityTrunk::isConnected() const
 
 void llbe::BackendConnectivityTrunk::backgroundTask()
 {
+  // Sleep initially otherwise we'll have a tiny race condition and it'll think the connection
+  // is down and try to reconnect immediately. The code is actually thread safe and this isn't
+  // rlly a problem but the logs become confusing
+  std::this_thread::sleep_for(std::chrono::seconds(EB_MAX_TIMEOUT_SEC));
   while (true)
   {
     if (stop_)

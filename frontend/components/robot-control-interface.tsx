@@ -32,6 +32,16 @@ interface RobotControlInterfaceProps {
   user: UserInfo
 }
 
+function sendCommand(cmd) {
+}
+
+type Keys = {
+  forward: boolean,
+  reverse: boolean,
+  left: boolean,
+  right: boolean
+};
+
 export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
   const rt = useRealtime();
 
@@ -42,8 +52,14 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
   const hasRobotControl = useSignal(rt.getSignal('robot:control'));
   const isEmergencyStopped = useSignal(rt.getSignal('robot:emergency_stop'));
   const telemetry = useSignal(rt.getSignal('robot:telemetry'));
+  const keys = useState<Keys>({
+    forward: false,
+    reverse: false,
+    left: false,
+    right: false,
+  });
 
-  const currentRobot = (robots as Array<any> || []).find(r => r?.id === assignedRobot?.id) || {};
+  const currentRobot = (robots?.robots as Array<any> || []).find(r => r?.id === assignedRobot?.id) || {};
 
   // TODO: remove these. They are for testing (mocks)
   const hasControl = true;
@@ -79,35 +95,37 @@ export function RobotControlInterface({ user }: RobotControlInterfaceProps) {
     rt.getSignal('robot:telemetry').set({});
   }, []);
 
-  // Keyboad control
-  // useEffect(() => {
-  //   const handleKeyDown = (e: KeyboardEvent) => {
-  //     console.log(`[v0] Robot control: ${e.key} pressed`);
-  //     switch (e.key.toLowerCase()) {
-  //       case "w":
-  //       case "arrowup":
-  //         handleMove("forward");
-  //         break;
-  //       case "s":
-  //       case "arrowdown":
-  //         handleMove("backward");
-  //         break;
-  //       case "a":
-  //       case "arrowleft":
-  //         handleMove("left");
-  //         break;
-  //       case "d":
-  //       case "arrowright":
-  //         handleMove("right")
-  //         break;
-  //       default:
-  //         break;
-  //     }
-  //   }
 
-  //   window.addEventListener("keydown", handleKeyDown);
-  //   return () => window.removeEventListener("keydown", handleKeyDown);
-  // }, []);
+
+  // Keyboad control
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      console.log(`[v0] Robot control: ${e.key} pressed`);
+      switch (e.key.toLowerCase()) {
+        case "w":
+        case "arrowup":
+          sendCommand("forward");
+          break;
+        case "s":
+        case "arrowdown":
+          sendCommand("backward");
+          break;
+        case "a":
+        case "arrowleft":
+          sendCommand("left");
+          break;
+        case "d":
+        case "arrowright":
+          sendCommand("right")
+          break;
+        default:
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <div className="space-y-6">

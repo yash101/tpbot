@@ -7,6 +7,20 @@ using std::shared_ptr;
 using std::string;
 using nlohmann::json;
 
+// Temporary code to allow me to bringup the robot firmware
+void bodgeCode(json j)
+{
+  // get a connected robot (probably just one)
+  int8_t power = j.value("power", 0);
+  int8_t turn = j.value("turn", 0);
+
+  int8_t left_speed = std::clamp(power + turn, -128, 127);
+  int8_t right_speed = std::clamp(power - turn, -128, 127);
+
+  // Build struct, send via UDP to robot
+  
+}
+
 llbe::LLBE::LLBE(shared_ptr<Config>& config) :
   config_(config),
   trunk_(config)
@@ -39,76 +53,82 @@ void llbe::LLBE::start()
   std::thread t(&llbe::BackendConnectivityTrunk::backgroundTask, &trunk_);
   worker_trunk_ = std::move(t);
 
-  // handle messages from the trunk
-  trunk_.on_message([this](rtc::message_variant msg) {
-    this->handleMessageFromTrunk(msg);
+  // // handle messages from the trunk
+  // trunk_.on_message([this](rtc::message_variant msg) {
+  //   this->handleMessageFromTrunk(msg);
+  // });
+
+  trunk_.addHandler("connection:open", [&](auto msg){
+    LOG_INFO("Connected to backend server at " + config_->server.address);
+    json j = {
+      { "type", "user:auth" },
+      { "username", "llbe" },
+      { "password", config_->server.password } // TODO: use proper auth token
+    };
+    auto str = j.dump();
+    trunk_.send(str);
+    is_logged_in_ = false;
   });
-}
 
-// Temporary code to allow me to bringup the robot firmware
-void bodgeCode(json j)
-{
-  // get a connected robot (probably just one)
-  int8_t power = j.value("power", 0);
-  int8_t turn = j.value("turn", 0);
+  trunk_.addHandler("connection:closed", [&](auto msg){
+    LOG_WARNING("Disconnected from backend server at " + config_->server.address);
+    is_logged_in_ = false;
+  });
 
-  int8_t left_speed = std::clamp(power + turn, -128, 127);
-  int8_t right_speed = std::clamp(power - turn, -128, 127);
+  trunk_.addHandler("connection:error", [&](auto msg){
+    LOG_ERROR("Connection error from backend server at " + config_->server.address + ": " + msg.value("error", "unknown error"));
+    is_logged_in_ = false;
+  });
 
-  // Build struct, semd via UDP to robot
-}
-
-void llbe::LLBE::handleMessageFromTrunk(rtc::message_variant& msg)
-{
-  if (!std::holds_alternative<string>(msg))
-    return;
-  
-  // Handle messages from the trunk here
-  string json_str = std::get<string>(msg);
-  json j = json::parse(json_str, nullptr, false);
-
-  if (!j["type"].is_string())
-  {
-    LOG_WARNING("Received message without type from trunk: " + json_str);
-    return;
-  }
-
-  string type = j["type"].get<string>();
-
-  if (type == "ping:resp")
-  {
-    // Ignore
-  } else if (type == "ping")
-  {
+  trunk_.addHandler("ping", [&](auto msg) {
     // Respond to ping
     json resp = {
       { "type", "ping:resp" },
-      { "timestamp", j.value("timestamp", 0) },
-      { "incomingTimestamp", j.value("timestamp", 0) },
-      { "timestampResp", (int)std::chrono::duration_cast<std::chrono::milliseconds>(
+      { "timestamp", msg.value("timestamp", 0) },
+      { "incomingTimestamp", msg.value("timestamp", 0) },
+      { "timestampResp", std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch()).count() }
     };
     string resp_str = resp.dump();
     rtc::message_variant resp_msg = resp_str;
     trunk_.send(resp_msg);
-  }
-  else if (type == "control")
-  {
+  });
+
+  trunk_.addHandler("ping:resp", [&](auto msg){
+    (void) msg;
+    // We can just ignore ping responses for now.
+  });
+
+  trunk_.addHandler("user:auth", [&](auto msg) {
+    bool success = msg.value("success", false);
+    if (success)
+    {
+      LOG_INFO("Successfully authenticated with backend server");
+      is_logged_in_ = true;
+    }
+    else
+    {
+      LOG_ERROR("Failed to authenticate with backend server: " + msg.value("error", "unknown error"));
+      is_logged_in_ = false;
+    }
+  });
+
+  trunk_.addHandler("webrtc:sdp", [&](auto msg) {
+    handleSdpMessage(msg);
+  });
+
+  trunk_.addHandler("webrtc:ice", [&](auto msg) {
+    handleIceCandidateMessage(msg);
+  });
+
+  // WebRTC isn't really working yet so just use WebSocket for control
+  // Deadline for WebRTC is end of September 2025 (Ashley's housewarming prob)
+  // Also WebRTC might not have significant advantages at Ashley's due to the
+  // network setup (NAT, CGNAT, etc)
+  trunk_.addHandler("robot:control", [&](auto msg) {
     // Control message for robot
-    bodgeCode(j);
-  }
-  else if (type == "webrtc:sdp")
-    handleSdpMessage(j);
-  else if (type == "webrtc:ice")
-    handleIceCandidateMessage(j);
-  else if (type == "robot:assign")
-  {
-    // Assign control of a robot to a user
-  }
-  else
-  {
-    LOG_WARNING("Unknown message type from trunk: " + type);
-  }
+    bodgeCode(msg);
+  });
 }
 
 void llbe::LLBE::handleSdpMessage(const json& j)

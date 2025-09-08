@@ -69,7 +69,7 @@ export function Settings() {
   }, [robots])
 
   const selectedRobotObj = useMemo(() => {
-    return (robots as any[]).find((r) => r.id === selectedRobot) || null
+    return (robots?.robots as any[]).find((r) => r.id === selectedRobot) || null
   }, [robots, selectedRobot])
 
   function saveUser() {
@@ -248,7 +248,7 @@ export function Settings() {
                   <SelectValue>{selectedRobotObj?.name ?? 'Select'}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {(robots as any[]).map((r) => (
+                  {(robots?.robots as any[]).map((r) => (
                     <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
                   ))}
                 </SelectContent>
