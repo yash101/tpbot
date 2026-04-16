@@ -1,4 +1,5 @@
 #include "llbe.hpp"
+#include <algorithm>
 #include <thread>
 #include <nlohmann/json.hpp>
 #include "logger.hpp"
