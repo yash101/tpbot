@@ -18,29 +18,38 @@
  * and it'll act like my ex after she came home late last night.
  */
 
-import { sql, SQL } from 'bun';
+import { Pool } from 'pg';
+import crypto from 'crypto';
+import { StoredUserRole } from './user.js';
 
 let dbUrl: string | null = process.env.DATABASE_URL || null;
 // Actual semi-prod database connection string. Kinda ignore the hardcoded password ;)
-// dbUrl = dbUrl || 'postgresql://tpbot:password123@pg.srv1.devya.sh/test-tpbot-0';
+dbUrl = dbUrl || 'postgresql://tpbot:password123@10.0.129.9/test-tpbot-0';
 
 // For SpaceX demo (if it'll work)
-dbUrl = dbUrl || 'postgresql://postgres:password@localhost:5432/postgres';
-const db = new SQL(dbUrl);
+// dbUrl = dbUrl || 'postgresql://postgres:password@localhost:5432/postgres';
+const pool = new Pool({
+  connectionString: dbUrl,
+  max: 20, // Maximum number of connections in the pool
+});
 
 // Create tables
 async function createTables() {
   try {
-    await db.connect();
-    await db`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(255) UNIQUE NOT NULL,
-        password_hash VARCHAR(255),
-        name VARCHAR(255) DEFAULT 'spongebob',
-        role VARCHAR(50) NOT NULL DEFAULT 'guest'
-      )
-    `;
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(255) UNIQUE NOT NULL,
+          password_hash VARCHAR(255),
+          name VARCHAR(255) DEFAULT 'spongebob',
+          role VARCHAR(50) NOT NULL DEFAULT '${StoredUserRole.NEW}'
+        )
+      `);
+    } finally {
+      client.release();
+    }
   } catch (e) {
     console.error('Failed to connect to database. Die.', e);
     process.exit(1);
@@ -49,6 +58,22 @@ async function createTables() {
 
 const ready = createTables();
 
+// Simple password hashing utility using Node.js crypto
+async function hashPassword(password: string): Promise<string> {
+  // For production, use bcrypt instead
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2(password, 'salt', 100000, 64, 'sha512', (err, derivedKey) => {
+      if (err) reject(err);
+      resolve(derivedKey.toString('hex'));
+    });
+  });
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const newHash = await hashPassword(password);
+  return newHash === hash;
+}
+
 export async function authenticateUser({
   username,
   password,
@@ -56,41 +81,46 @@ export async function authenticateUser({
   username: string;
   password: string
 }): Promise<{
+  id: number,
   username: string;
   name: string;
   role: string;
 } | null> {
   await ready;
 
-  const query = await db`
-    SELECT *
-    FROM users
-    WHERE username = ${username}
-    LIMIT 1
-  `;
+  const result = await pool.query(
+    'SELECT * FROM users WHERE username = $1 LIMIT 1',
+    [username]
+  );
+  const query = result.rows;
 
   // our sneaky way of reset password is just set password to null via PgAdmin lol
   // our sneaky way of creating a new user is just try to login with a new username
   // this is NOT how you should do it in a real app, obviously
   if (query.length === 0 || query[0].password_hash === null) {
-    const hash = await Bun.password.hash(password);
-    await db`
-      INSERT INTO users (username, password_hash, name, role)
-      VALUES (${username}, ${hash}, 'New User', 'guest')
-      ON CONFLICT (username) DO UPDATE
-      SET password_hash = EXCLUDED.password_hash
-    `;
+    const hash = await hashPassword(password);
+    await pool.query(
+      `INSERT INTO users (username, password_hash, name, role)
+        VALUES ($1, $2, 'New User', '${StoredUserRole.NEW}')
+        ON CONFLICT (username) DO UPDATE
+        SET password_hash = EXCLUDED.password_hash
+        RETURNING id
+      `,
+      [username, hash]
+    );
 
     return {
+      id: query[0]?.id ?? -1, // this is a bit hacky, but we don't actually need the id for anything right now, so it doesn't matter
       username,
       name: 'New User',
-      role: 'guest'
+      role: StoredUserRole.NEW,
     };
   }
 
   const user = query[0];
-  if (user && await Bun.password.verify(password, user.password_hash)) {
+  if (user && await verifyPassword(password, user.password_hash)) {
     return {
+      id: user.id,
       username: user.username,
       name: user.name,
       role: user.role,
@@ -111,30 +141,33 @@ export async function updateUser({
 }): Promise<void> {
   await ready;
 
-  // get the current user data
-  const query = await db`
-    SELECT *
-    FROM users
-    WHERE username = ${username}
-    LIMIT 1
-  `;
+  const client = await pool.connect();
+  try {
+    // get the current user data
+    const result = await client.query(
+      'SELECT * FROM users WHERE username = $1 LIMIT 1',
+      [username]
+    );
+    const query = result.rows;
 
-  if (query.length === 0) {
-    throw new Error('User not found');
+    if (query.length === 0) {
+      throw new Error('User not found');
+    }
+
+    const user = query[0];
+
+    const updatedName = name ?? user.name;
+    const updatedPasswordHash = password
+      ? await hashPassword(password)
+      : user.password_hash;
+
+    await client.query(
+      `UPDATE users
+       SET name = $1, password_hash = $2
+       WHERE username = $3`,
+      [updatedName, updatedPasswordHash, username]
+    );
+  } finally {
+    client.release();
   }
-
-  const user = query[0];
-
-  const updatedName = name ?? user.name;
-  const updatedPasswordHash = password
-    ? await Bun.password.hash(password)
-    : user.password_hash;
-
-  await db`
-    UPDATE users
-    SET
-      name = ${updatedName},
-      password_hash = ${updatedPasswordHash}
-    WHERE username = ${username}
-  `;
 }

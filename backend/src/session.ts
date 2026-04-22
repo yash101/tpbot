@@ -1,528 +1,434 @@
-import { authenticateUser, updateUser } from "./db";
-import { UserRole } from "./user";
+import { WebSocket } from 'ws';
+import { authenticateUser, updateUser } from "./db.js";
+import { ActiveUserRole, activeRoleForClientKind, isRobot, isUser, StoredUserRole, ClientKind } from "./user.js";
+import { AuthFailureResponse, AuthRequest, AuthSuccessResponse, CurrentStateMessage, ErrorMessage, ForwardMessageToRobotRequest, Message, MessageType, Robot, RobotAcquireFailureResponse, RobotAcquireRequest, RobotListRequest, RobotListResponse, RobotReleaseRequest, RobotReleaseResponse, RobotStolenByAnotherUserMessage, RobotSuccessfullyAcquiredResponse, SignalP2PAnswerRequest, SignalP2PIceCandidateRequest, SignalP2POfferRequest, SignalP2PPeerDisconnectedMessage } from './messages.js';
 
 export class SessionManager {
-  private sessions = new Map<string, Session>();
-  private wsToSession = new Map<Bun.ServerWebSocket<unknown>, string>();
-  private idCounter = 0;
-  private robots = new Map<string, Session>(); // Map of robotId to Session
-  private llbeSession: Session | null = null; // Session for LLBE connection
-  private llbeLastPing: Date | null = null; // Track last LLBE ping
-  readonly parties = new Map<string, Set<Session>>(); // partyId -> set of sessions
+  public nextSessionId: number = 69;
+  public sessionByWsMap: Map<WebSocket, Session> = new Map();
+  public sessionsByUserIdMap: Map<number, Session[]> = new Map();
+  public sessionBySessionIdMap: Map<number, Session> = new Map();
+  public robotsInUse: Map<number, number> = new Map(); // robotUserId to sessionId mapping for acquired robots
+  public activeP2PConnections: Map<number, Set<number>> = new Map(); // sessionId to peer session ids mapping for active P2P connections
 
-  partyJoin(partyId: string, session: Session) {
-    if (!this.parties.has(partyId)) {
-      this.parties.set(partyId, new Set());
-    }
-    this.parties.get(partyId)!.add(session);
+  public createSession(ws: WebSocket): Session {
+    const session = new Session(this.nextSessionId++, ws, this);
+    this.sessionBySessionIdMap.set(session.sessionId, session);
+    this.sessionByWsMap.set(ws, session);
+    return session;
   }
 
-  partyLeave(partyId: string, session: Session) {
-    if (this.parties.has(partyId)) {
-      this.parties.get(partyId)!.delete(session);
-      if (this.parties.get(partyId)!.size === 0) {
-        this.parties.delete(partyId);
+  public getSessionByWs(ws: WebSocket): Session | undefined {
+    return this.sessionByWsMap.get(ws);
+  }
+  
+  public getSessionByUserId(userId: number): Session[] | undefined {
+    return this.sessionsByUserIdMap.get(userId);
+  }
+
+  public getSessionBySessionId(sessionId: number): Session | undefined {
+    return this.sessionBySessionIdMap.get(sessionId);
+  }
+
+  public addP2PConnection(sessionId1: number, sessionId2: number): void {
+    const peers1 = this.activeP2PConnections.get(sessionId1) ?? new Set<number>();
+    peers1.add(sessionId2);
+    this.activeP2PConnections.set(sessionId1, peers1);
+
+    const peers2 = this.activeP2PConnections.get(sessionId2) ?? new Set<number>();
+    peers2.add(sessionId1);
+    this.activeP2PConnections.set(sessionId2, peers2);
+  }
+
+  public removeP2PConnection(sessionId1: number, sessionId2: number): void {
+    const peers1 = this.activeP2PConnections.get(sessionId1);
+    peers1?.delete(sessionId2);
+    if (peers1?.size === 0) this.activeP2PConnections.delete(sessionId1);
+
+    const peers2 = this.activeP2PConnections.get(sessionId2);
+    peers2?.delete(sessionId1);
+    if (peers2?.size === 0) this.activeP2PConnections.delete(sessionId2);
+  }
+
+  public disconnectP2PPeers(session: Session, robotUserId?: number): void {
+    const peerSessionIds = [...(this.activeP2PConnections.get(session.sessionId) ?? [])];
+    for (const peerSessionId of peerSessionIds) {
+      const peerSession = this.getSessionBySessionId(peerSessionId);
+      if (robotUserId !== undefined && peerSession?.context.user?.id !== robotUserId) continue;
+
+      this.removeP2PConnection(session.sessionId, peerSessionId);
+
+      if (peerSession) {
+        peerSession.sendMessage<SignalP2PPeerDisconnectedMessage>({
+          type: MessageType.SIGNAL_PEER_DISCONNECTED,
+          timestamp: Date.now(),
+          targetId: session.sessionId,
+        }).catch(err => console.warn('⚠️ Failed to send peer disconnected message to peer session:', err));
       }
     }
   }
 
-  getPartyMembers(partyId: string): Set<Session> | null {
-    return this.parties.get(partyId) || null;
-  }
+  public isAuthorizedP2PSignal(sourceSession: Session, targetSession: Session): boolean {
+    if (!sourceSession.context.user || !targetSession.context.user) return false;
 
-  createSession(socket: Bun.ServerWebSocket<unknown>): Session {
-    const sessionId = `session-${this.idCounter++}`;
-  const session = new Session(this, sessionId);
-    session.ws = socket;
-    
-    this.sessions.set(sessionId, session);
-    this.wsToSession.set(socket, sessionId);
-
-    return session;
-  }
-
-  getSessionById(sessionId: string): Session | undefined {
-    return this.sessions.get(sessionId);
-  }
-  
-  getSessionByWs(ws: Bun.ServerWebSocket<unknown>): Session | undefined {
-    const sessionId = this.wsToSession.get(ws);
-    if (sessionId) {
-      return this.sessions.get(sessionId);
+    if (isUser(sourceSession.context.activeRole) && isRobot(targetSession.context.activeRole)) {
+      return this.robotsInUse.get(targetSession.context.user.id) === sourceSession.sessionId;
     }
-    return undefined;
+
+    if (isRobot(sourceSession.context.activeRole) && isUser(targetSession.context.activeRole)) {
+      return this.robotsInUse.get(sourceSession.context.user.id) === targetSession.sessionId;
+    }
+
+    return false;
   }
 
-  removeSession(session: Session) {
-    this.sessions.delete(session.sessionId);
-    if (session.ws) {
-      this.wsToSession.delete(session.ws);
+  public deleteSession(session: Session): void {
+    this.disconnectP2PPeers(session);
+
+    for (const [robotUserId, ownerSessionId] of [...this.robotsInUse.entries()]) {
+      if (ownerSessionId === session.sessionId) {
+        this.robotsInUse.delete(robotUserId);
+      }
     }
-    if (session.robotId) {
-      this.robots.delete(session.robotId);
+
+    this.sessionByWsMap.delete(session.ws);
+    this.sessionBySessionIdMap.delete(session.sessionId);
+
+    const userId = session.context.user?.id;
+    if (userId !== undefined) {
+      const newSessionsForUserId = this.sessionsByUserIdMap.get(userId)
+        ?.filter(s => s.sessionId !== session.sessionId) ?? [];
+      if (newSessionsForUserId.length > 0) this.sessionsByUserIdMap.set(userId, newSessionsForUserId);
+      else this.sessionsByUserIdMap.delete(userId);
     }
   }
 
-  getLLBEConnection(): Session | null {
-    return this.llbeSession;
-  }
+  public getRobotList(): Robot[] {
+    const robots: Record<number, Robot> = {};
+    for (const [userId, session] of this.sessionsByUserIdMap) {
+      if (!isRobot(session[0]?.context?.activeRole ?? ActiveUserRole.UNDEFINED)) continue;
+      const robotUserId = session[0]!.context.user.id;
 
-  setLlbeSession(session: Session | null) {
-    this.llbeSession = session;
-  }
+      robots[robotUserId] ??= {
+        robotUserId,
+        name: session[0]!.context.user.name,
+        available: !this.robotsInUse.has(robotUserId),
+        isControllerConnected: false,
+        isVideoConnected: false,
+      };
 
-  getRobotSession(robotId: string): Session | undefined {
-    return this.robots.get(robotId);
-  }
-  
-  registerRobotSession(robotId: string, session: Session) {
-    this.robots.set(robotId, session);
-  }
-
-  getRobots(): Map<string, Session> {
-    return this.robots;
-  }
-
-  updateLlbePing() {
-    this.llbeLastPing = new Date();
-  }
-
-  getLlbeLastPing(): Date | null {
-    return this.llbeLastPing;
-  }
-
-  isLlbeConnected(): boolean {
-    if (!this.llbeSession || !this.llbeLastPing) {
-      return false;
+      for (const s of session) {
+        switch (s.context.activeRole) {
+          case ActiveUserRole.ROBOT_CONTROLLER:
+            robots[robotUserId].isControllerConnected ||= true;
+            break;
+          case ActiveUserRole.ROBOT_VIDEO:
+            robots[robotUserId].isVideoConnected ||= true;
+            break;
+          default: break;
+        }
+      }
     }
-    // Consider LLBE disconnected if no ping for more than 30 seconds
-    const now = new Date();
-    const thirtySecondsAgo = new Date(now.getTime() - 30000);
-    return this.llbeLastPing > thirtySecondsAgo;
+
+    return Object.values(robots);
   }
 }
 
 export class Session {
-  sessionManager: SessionManager;
-  sessionId: string;
-  ws: Bun.ServerWebSocket<unknown> | null = null;
+  public context: Record<string, any> = {}; // kinda bodgey but should get the ball rolling for now
+  private stateSendInterval: NodeJS.Timeout | null = null;
 
-  username: string | null = null;
-  name: string = 'New User';
-  role: string = 'guest';
-  robotId: string | null = null;
-  controlledRobot: string | null = null;
-  canRequestControl: boolean = true; // New property to manage control request ability
-  party: string | null = null; // Party ID for grouping users and robots
-
-  closeCallbacks: ((s: Session) => void)[] = [];
-
-  // Map of message type -> handler method
-  private messageHandlers: Map<string, (message: any) => Promise<boolean | void>>;
-
-  constructor(sessionManager: SessionManager, sessionId?: string) {
-    this.sessionManager = sessionManager;
-    this.sessionId = sessionId || `session-${Date.now()}`;
-
-    // Bind handlers per message type
-    this.messageHandlers = new Map([
-      ['ping', (m) => this.handle_ping(m)],
-      ['ping:resp', async (m) => true], // No-op for ping responses
-      ['user:auth', (m) => this.handle_user_auth(m)],
-      ['user:update', (m) => this.handle_user_update(m)],
-
-      // WebRTC handlers
-      ['webrtc:sdp', (m) => this.handle_webrtc_sdp(m)],
-      ['webrtc:ice', (m) => this.handle_webrtc_ice(m)],
-
-      // Admin handlers
-      ['robot:list', (m) => this.handle_admin_robot_list(m)],
-      ['user:list', (m) => this.handle_admin_user_list(m)],
-      ['robot:assign', (m) => this.handle_admin_robot_assign(m)],
-      ['robot:unassign', (m) => this.handle_admin_robot_unassign(m)],
-      ['robot:current_info', (m) => this.handle_admin_robot_current_info(m)],
-      ['user:active_list', (m) => this.handle_admin_user_active_list(m)],
-      ['user:assign_party', (m) => this.handle_admin_user_assign_party(m)],
-
-      // LLBE handlers
-      ['robot:telemetry', (m) => this.handle_llbe_robot_telemetry(m)],
-      ['robot:status', (m) => this.handle_llbe_robot_status(m)],
-      ['robot:login', (m) => this.handle_llbe_robot_login(m)],
-      ['robot:logout', (m) => this.handle_llbe_robot_logout(m)],
-
-      // User handlers
-      ['control:request', (m) => this.handle_user_control_request(m)],
-      ['control:release', (m) => this.handle_user_control_release(m)],
-
-      // Party handlers (TODO: implement)
-      ['party:join', (m) => this.handle_party_join(m)],
-      ['party:leave', (m) => this.handle_party_leave(m)],
-      ['party:list', (m) => this.handle_party_list(m)] // Admin only?
-    ]);
+  constructor(
+    public sessionId: number,
+    public ws: WebSocket,
+    public sessionManager: SessionManager,
+  ) {
+    this.stateSendInterval = setInterval(this.sendCurrentState.bind(this), 2000);
   }
-
-  send(data: any) {
-    if (this.ws) {
-      this.ws.send(JSON.stringify(data));
-    }
-  }
-
+  
   async onMessage(message: any) {
-    const type = message?.type;
-    if (!type || typeof type !== 'string') {
-      console.warn('Received message without valid type:', message);
-      return;
-    }
+    // Handle incoming messages here
+    console.log("Received message:", message);
 
-    const handler = this.messageHandlers.get(type);
-
-    const unauthenticatedMessageTypes = new Set([
-      'ping',
-      'ping:resp',
-      'user:auth'
-    ]);
-
-    // Allow unauthenticated handlers for ping and auth
-    if (!this.username && !unauthenticatedMessageTypes.has(type)) {
-      this.send({
-        type,
-        success: false,
-        error: 'Not authenticated'
-      });
-
-      console.warn('Unauthenticated message received, closing session');
-      this.close();
-      return;
-    }
-
-    if (handler) {
-      try {
-        const handled = await handler(message);
-        // If handler returns true it already routed/sent reply
-        if (handled === true) return;
-      } catch (e) {
-        console.error('Error handling message', type, e);
-        this.send({ type, success: false, error: 'Handler error' });
-      }
-      return;
-    }
-
-    // Unknown message type
-    console.warn('Unknown message type:', type);
-  }
-
-  // --- Per-message handlers ---
-  async handle_ping(message: any) {
-    // Check if this ping is from LLBE by looking for LLBE-specific identifiers
-    if (this === this.sessionManager.getLLBEConnection()) {
-      this.sessionManager.setLlbeSession(this);
-      this.sessionManager.updateLlbePing();
-    }
-
-    this.send({
-      ...message,
-      type: 'ping:resp',
-      timestamp: Date.now(),
-      incomingTimestamp: message.timestamp,
-    });
-    return true;
-  }
-
-  async handle_user_auth(message: any) {
-    // check if already authenticated
-    if (this.username) {
-      this.send({ type: 'user:auth', success: true, name: this.name, role: this.role });
-      return true;
-    }
-
-    const { username, password } = message;
-
-    let user;
-    try {
-      user = await authenticateUser({ username, password });
-    } catch (e) {
-      console.error('Authentication error:', e);
-      this.send({ type: 'user:auth', success: false });
-      return true;
-    }
-
-    if (!user) {
-      this.send({ type: 'user:auth', success: false });
-      return true;
-    }
-
-    this.username = user.username;
-    this.name = user.name;
-    this.role = user.role;
-    this.canRequestControl = [UserRole.ADMIN, UserRole.USER].includes(user.role as UserRole);
-
-    if (user.role === UserRole.LLBE) {
-      this.sessionManager.setLlbeSession(this);
-    }
-
-    this.send({ type: 'user:auth', success: true, name: this.name, role: this.role });
-    return true;
-  }
-
-  async handle_user_update(message: any) {
-    try {
-      await updateUser({ username: this.username!, name: message.name, password: message.password });
-      this.send({ type: 'user:update', success: true });
-    } catch (e) {
-      console.error('Error updating user:', e);
-      this.send({ type: 'user:update', success: false });
-    }
-    return true;
-  }
-
-  // WebRTC handlers
-  async handle_webrtc_sdp(message: any) {
-    // If the sender is a regular user/browser and wants to talk to LLBE
-    if (message?.target === 'llbe') {
-      const llbeSession = this.sessionManager.getLLBEConnection();
-      if (!llbeSession) {
-        console.warn('No LLBE session available for webrtc:sdp');
-        this.send({ type: 'webrtc:sdp', target: 'llbe', success: false, error: 'No LLBE connection available' });
-        return true;
-      }
-
-      if (!message?.sdp) {
-        console.warn('No SDP in webrtc:sdp message');
-        this.send({ type: 'webrtc:sdp', target: 'llbe', success: false, error: 'No SDP provided' });
-        return true;
-      }
-
-      llbeSession.send({ type: 'webrtc:sdp', sessionid: this.sessionId, sdp: message.sdp });
-      return true;
-    }
-
-    // Message coming from LLBE
-    if (this === this.sessionManager.getLLBEConnection()) {
-      const targetSessionId = message?.sessionid || message?.target;
-      if (!targetSessionId) {
-        console.warn('LLBE sdp message missing session id/target');
-        return true;
-      }
-
-      const targetSession = this.sessionManager.getSessionById(targetSessionId);
-      if (!targetSession) {
-        console.warn('No target session for webrtc:sdp message', targetSessionId);
-        return true;
-      }
-
-      let sdpPayload = message.sdp;
-      if (typeof sdpPayload === 'string') sdpPayload = { type: 'answer', sdp: sdpPayload };
-
-      targetSession.send({ type: 'webrtc:sdp', sdp: sdpPayload, target: 'llbe' });
-      return true;
-    }
-
-    console.warn('SDP message routing unsupported for this sender/target');
-    return true;
-  }
-
-  async handle_webrtc_ice(message: any) {
-    // From browser -> LLBE
-    if (message?.target === 'llbe') {
-      const llbeSession = this.sessionManager.getLLBEConnection();
-      if (!llbeSession) {
-        console.warn('No LLBE session available for webrtc:ice');
-        this.send({ type: 'webrtc:ice', target: 'llbe', success: false, error: 'No LLBE connection available' });
-        return true;
-      }
-
-      const candidateStr = message.candidate?.candidate || message.candidate || null;
-      llbeSession.send({
-        type: 'webrtc:ice',
-        sessionid: this.sessionId,
-        candidate: candidateStr,
-        sdpMid: message.candidate?.sdpMid,
-        sdpMLineIndex: message.candidate?.sdpMLineIndex,
-      });
-      return true;
-    }
-
-    // From LLBE -> browser
-    if (this === this.sessionManager.getLLBEConnection()) {
-      const targetSessionId = message?.sessionid || message?.target;
-      if (!targetSessionId) {
-        console.warn('LLBE ice message missing session id/target');
-        return true;
-      }
-
-      const targetSession = this.sessionManager.getSessionById(targetSessionId);
-      if (!targetSession) {
-        console.warn('No target session for webrtc:ice message', targetSessionId);
-        return true;
-      }
-
-      const candObj = typeof message.candidate === 'string'
-        ? { candidate: message.candidate, sdpMid: message?.sdpMid, sdpMLineIndex: message?.sdpMLineIndex }
-        : message.candidate;
-      targetSession.send({ type: 'webrtc:ice', candidate: candObj, target: 'llbe' });
-      return true;
-    }
-
-    console.warn('ICE message routing unsupported for this sender/target');
-    return true;
-  }
-
-  // Admin handlers (per-message)
-  async handle_admin_robot_list(message: any) {
-    const robotSessions = this.sessionManager.getRobots();
-    const robots = Array.from(robotSessions.entries()).map(([robotId, session]) => ({
-      id: robotId,
-      name: session.robotId || robotId,
-      status: session.ws && session.ws.readyState === WebSocket.OPEN ? "online" : "offline",
-      battery: 0, // TODO: get from telemetry
-      signal: 0,  // TODO: get from telemetry  
-      controller: session.controlledRobot || null,
-      party: session.party || null,
-      lastSeen: new Date().toISOString()
-    }));
-
-    this.send({
-      type: 'robot:list',
-      robots,
-      llbeStatus: {
-        connected: this.sessionManager.isLlbeConnected(),
-        lastPing: this.sessionManager.getLlbeLastPing()?.toISOString() || null
-      }
-    });
-    return true;
-  }
-
-  async handle_admin_user_list(message: any) {
-    this.send({ type: 'user:list', users: [], error: 'Not implemented / likely will never be implemented. Just update the DB directly' });
-    return true;
-  }
-
-  async handle_admin_robot_assign(message: any) {
-    // Assign a robot to a user (TODO: implement)
-    // Keep API surface for future implementation
-    // const { robotId, username } = message;
-    return true;
-  }
-
-  async handle_admin_robot_unassign(message: any) { return true; }
-  async handle_admin_robot_current_info(message: any) { return true; }
-  async handle_admin_user_active_list(message: any) { return true; }
-  async handle_admin_user_assign_party(message: any) { return true; }
-
-  // LLBE handlers
-  async handle_llbe_robot_telemetry(message: any) { return true; }
-  async handle_llbe_robot_status(message: any) { return true; }
-  async handle_llbe_robot_login(message: any) { return true; }
-  async handle_llbe_robot_logout(message: any) { return true; }
-
-  async handle_party_join(message: any) {
-    const { partyId } = message;
-    if (!partyId || typeof partyId !== 'string' || partyId.trim() === '') {
-      this.send({
-        type: 'party:join',
-        success: false,
-        error: 'Invalid party ID'
-      });
-      return true;
-    }
-
-    this.party = partyId.trim();
-    this.sessionManager.partyJoin(this.party, this);
-    this.send({
-      type: 'party:join',
-      success: true,
-      partyId: this.party
-    });
-    return true;
-  }
-  async handle_party_leave(message: any) {
-    if (this.role === UserRole.ADMIN) {
-      const { partyId, sessionId } = message;
-      if (partyId && typeof partyId === 'string' && partyId.trim() !== '') {
-        const targetPartyId = partyId.trim();
-        const targetSession = sessionId && typeof sessionId === 'string' && sessionId.trim() !== ''
-          ? this.sessionManager.getSessionById(sessionId.trim())
-          : this;
-
-        if (targetSession && targetSession.party === targetPartyId) {
-          this.sessionManager.partyLeave(targetPartyId, targetSession);
-          targetSession.party = null;
-          targetSession.send({
-            type: 'party:leave',
-            success: true,
-            partyId: targetPartyId
-          });
-        } else {
-          this.send({
-            type: 'party:leave',
-            success: false,
-            error: 'Target session not in specified party'
-          });
-        }
-      }
-    } else {
-      if (this.party) {
-        const party = this.party;
-        this.sessionManager.partyLeave(party, this);
-        this.send({
-          type: 'party:leave',
-          success: true,
-          partyId: party,
+    switch (message.type) {
+      case MessageType.AUTH_REQUEST:
+        return this.authenticate(message as AuthRequest);
+      case MessageType.ROBOT_LIST_REQUEST:
+        return this.getRobotList(message as RobotListRequest);
+      case MessageType.ROBOT_ACQUIRE_REQUEST:
+        return this.acquireRobot(message as RobotAcquireRequest);
+      case MessageType.ROBOT_RELEASE_REQUEST:
+        return this.releaseRobot(message as RobotReleaseRequest);
+      case MessageType.FORWARD_MESSAGE_TO_ROBOT_REQUEST:
+        return this.forwardMessageToRobot(message as ForwardMessageToRobotRequest);
+      case MessageType.SIGNAL_P2POFFER_REQUEST:
+        return this.signalP2POffer(message as SignalP2POfferRequest);
+      case MessageType.SIGNAL_P2PANSWER_REQUEST:
+        return this.signalP2PAnswer(message as SignalP2PAnswerRequest);
+      case MessageType.SIGNAL_P2PICECANDIDATE_REQUEST:
+        return this.signalP2PICECandidate(message as SignalP2PIceCandidateRequest);
+      default:
+        return this.sendMessage<ErrorMessage>({
+          type: MessageType.ERROR,
+          timestamp: Date.now(),
+          error: 'Unknown message type',
         });
-
-        this.party = null;
-      }
     }
-
-    return true;
   }
 
-  async handle_party_list(message: any) {
-    if (this.role !== UserRole.ADMIN) {
-      this.send({
-        type: 'party:list',
-        success: false,
-        error: 'Not authorized'
+  async onClose() {
+    this.sessionManager.deleteSession(this);
+    this.ws.removeAllListeners();
+    if (this.stateSendInterval) clearInterval(this.stateSendInterval!);
+  }
+
+  async sendMessage<T = any>(message: T): Promise<void> {
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    } else {
+      console.warn('⚠️ Attempted to send message on closed WebSocket');
+    }
+  }
+
+  async authenticate(request: AuthRequest): Promise<void> {
+    const user = await authenticateUser(request);
+    const activeRole = user
+      ? activeRoleForClientKind(user.role as StoredUserRole, request.clientKind)
+      : null;
+
+    if (!user || !activeRole) {
+      return this.sendMessage<AuthFailureResponse>({
+        type: MessageType.AUTH_FAILURE,
+        timestamp: Date.now(),
+        error: 'Invalid username, password, or client type',
       });
-      return true;
     }
 
-    const partyInfo: { partyId: string; memberCount: number }[] = [];
-    for (const [partyId, members] of this.sessionManager.parties.entries()) {
-      partyInfo.push({ partyId, memberCount: members.size });
-    }
+    this.context.user = user;
+    this.context.activeRole = activeRole;
+    this.sessionManager.getSessionByUserId(user.id)?.push(this) ??
+      this.sessionManager.sessionsByUserIdMap.set(user.id, [this]);
 
-    this.send({
-      type: 'party:list',
-      success: true,
-      parties: partyInfo
+    return this.sendMessage<AuthSuccessResponse>({
+      type: MessageType.AUTH_SUCCESS,
+      timestamp: Date.now(),
+      name: user!.name,
+      role: activeRole,
     });
-    return true;
   }
 
-  // User handlers
-  async handle_user_control_request(message: any) {
-    console.log(`Control request for robot by user ${this.username}`);
-    return true;
+  async updateUserInfo(request: Message): Promise<void> {
+    return this.sendMessage<ErrorMessage>({
+      type: MessageType.AUTH_FAILURE,
+      timestamp: Date.now(),
+      error: 'User info update not implemented yet (MVP)',
+    });
   }
 
-  async handle_user_control_release(message: any) {
-    console.log(`Control release for robot by user ${this.username}`);
-    return true;
-  }
-
-  close() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+  async getRobotList(request: RobotListRequest): Promise<void> {
+    if (!this.context.user) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
     }
 
-    for (const cb of this.closeCallbacks) {
-      cb(this);
-    }
+    return this.sendMessage<RobotListResponse>({
+      type: MessageType.ROBOT_LIST_RESPONSE,
+      timestamp: Date.now(),
+      robots: this.sessionManager.getRobotList(),
+    });
   }
 
-  onCloseCleanup(cb: (s: Session) => void) {
-    this.closeCallbacks.push(cb);
+  async acquireRobot(request: RobotAcquireRequest): Promise<void> {
+    if (!this.context.user || !isUser(this.context.activeRole)) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
+    }
+
+    const currentOwnerSessionId = this.sessionManager.robotsInUse.get(request.robotUserId);
+    if (currentOwnerSessionId !== undefined && currentOwnerSessionId !== this.sessionId && !request.steal) {
+      return this.sendMessage<RobotAcquireFailureResponse>({
+        type: MessageType.ROBOT_ACQUIRE_RESPONSE,
+        timestamp: Date.now(),
+        error: 'Robot is currently in use',
+      });
+    }
+    else if (request.steal === true && currentOwnerSessionId !== undefined && currentOwnerSessionId !== this.sessionId) {
+      // Notify the previous session that their robot was stolen
+      const previousSession = this.sessionManager.getSessionBySessionId(currentOwnerSessionId);
+      previousSession
+        ?.sendMessage<RobotStolenByAnotherUserMessage>({
+          type: MessageType.ROBOT_STOLEN_MESSAGE,
+          timestamp: Date.now(),
+          robotUserId: request.robotUserId,
+        })
+        .catch(err => console.warn('⚠️ Failed to send robot stolen message to previous session:', err));
+      if (previousSession) this.sessionManager.disconnectP2PPeers(previousSession, request.robotUserId);
+      this.sessionManager.robotsInUse.delete(request.robotUserId);
+    }
+
+    // Get sessions for the robot
+    const sessions = this.sessionManager.getSessionByUserId(request.robotUserId)
+      ?.filter(s => isRobot(s.context.activeRole)) ?? [];
+    if (sessions.length === 0) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Robot is not connected',
+      });
+    }
+
+    this.sessionManager.robotsInUse.set(request.robotUserId, this.sessionId);
+
+    return this.sendMessage<RobotSuccessfullyAcquiredResponse>({
+      type: MessageType.ROBOT_ACQUIRE_RESPONSE,
+      timestamp: Date.now(),
+      robotUserId: request.robotUserId,
+      controllerSessionId: sessions?.find(s => s.context.activeRole === ActiveUserRole.ROBOT_CONTROLLER)?.sessionId ?? -1,
+      videoSessionId: sessions?.find(s => s.context.activeRole === ActiveUserRole.ROBOT_VIDEO)?.sessionId ?? -1,
+    });
+  }
+
+  async releaseRobot(request: RobotReleaseRequest): Promise<void> {
+    const userId = this.context.user?.id;
+    if (userId === undefined || !isUser(this.context.activeRole)) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
+    }
+
+    if (this.sessionManager.robotsInUse.get(request.robotUserId) !== this.sessionId) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'You do not currently have control of this robot',
+      });
+    }
+
+    this.sessionManager.robotsInUse.delete(request.robotUserId);
+    this.sessionManager.disconnectP2PPeers(this, request.robotUserId);
+
+    return this.sendMessage<RobotReleaseResponse>({
+      type: MessageType.ROBOT_RELEASE_RESPONSE,
+      timestamp: Date.now(),
+      robotUserId: request.robotUserId,
+    });
+  }
+
+  async forwardMessageToRobot(request: Message): Promise<void> {
+    if (!this.context.user) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
+    }
+
+    return this.sendMessage<ErrorMessage>({
+      type: MessageType.ERROR,
+      timestamp: Date.now(),
+      error: 'Forwarding messages to robot not implemented yet (MVP)',
+    });
+  }
+
+  async signalP2POffer(request: SignalP2POfferRequest): Promise<void> {
+    // auth guard
+    if (!this.context.user) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
+    }
+
+    const targetSession = this.sessionManager.getSessionBySessionId(request.targetId);
+    if (!targetSession || !this.sessionManager.isAuthorizedP2PSignal(this, targetSession)) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Invalid or unauthorized signaling target',
+      });
+    }
+
+    this.sessionManager.addP2PConnection(this.sessionId, targetSession.sessionId);
+    return targetSession.sendMessage<SignalP2POfferRequest>({
+      type: MessageType.SIGNAL_P2POFFER_REQUEST,
+      timestamp: Date.now(),
+      targetId: this.sessionId,
+      offer: request.offer,
+    });
+  }
+
+  async signalP2PAnswer(request: SignalP2PAnswerRequest): Promise<void> {
+    // auth guard
+    if (!this.context.user) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
+    }
+
+    const targetSession = this.sessionManager.getSessionBySessionId(request.targetId);
+    if (!targetSession || !this.sessionManager.isAuthorizedP2PSignal(this, targetSession)) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Invalid or unauthorized signaling target',
+      });
+    }
+
+    this.sessionManager.addP2PConnection(this.sessionId, targetSession.sessionId);
+    return targetSession.sendMessage<SignalP2PAnswerRequest>({
+      type: MessageType.SIGNAL_P2PANSWER_REQUEST,
+      timestamp: Date.now(),
+      targetId: this.sessionId,
+      answer: request.answer,
+    });
+  }
+
+  async signalP2PICECandidate(request: SignalP2PIceCandidateRequest): Promise<void> {
+    // auth guard
+    if (!this.context.user) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
+    }
+
+    const targetSession = this.sessionManager.getSessionBySessionId(request.targetId);
+    if (!targetSession || !this.sessionManager.isAuthorizedP2PSignal(this, targetSession)) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Invalid or unauthorized signaling target',
+      });
+    }
+
+    return targetSession.sendMessage<SignalP2PIceCandidateRequest>({
+      type: MessageType.SIGNAL_P2PICECANDIDATE_REQUEST,
+      timestamp: Date.now(),
+      targetId: this.sessionId,
+      candidate: request.candidate,
+    });
+  }
+
+  async sendCurrentState(): Promise<void> {
+    return this.sendMessage<CurrentStateMessage>({
+      type: MessageType.CURRENT_STATE,
+      timestamp: Date.now(),
+      authenticated: Boolean(this.context.user),
+      userName: this.context.user?.name,
+      userRole: this.context.activeRole,
+      robotUserId: isRobot(this.context.activeRole) ? this.context.user.id : undefined,
+    });
   }
 }

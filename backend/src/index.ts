@@ -1,54 +1,48 @@
-import { SessionManager } from "./session";
+import { WebSocketServer, WebSocket } from 'ws';
+import { SessionManager } from "./session.js";
 
 const sessionManager: SessionManager = new SessionManager();
 
-const WsServer = Bun.serve({
-  fetch(req, server) {
-    console.log("New connection attempt");
-    if (req.headers.get("upgrade") !== "websocket") {
-      return new Response("Expected WebSocket", { status: 400 });
+// Create WebSocket server listening on port 8080
+const wss = new WebSocketServer({ port: 8080 });
+
+console.log('WebSocket server listening on port 8080');
+
+wss.on('connection', (ws: WebSocket) => {
+  console.log('Client connected');
+  
+  // Create a new session for this connection
+  const session = sessionManager.createSession(ws);
+  
+  ws.on('message', (msg: string | Buffer) => {
+    let message: any;
+    
+    // Normalize and safely parse JSON
+    try {
+      const msgStr = Buffer.isBuffer(msg) ? msg.toString('utf8') : msg;
+      message = JSON.parse(msgStr);
+    } catch (err) {
+      console.warn('⚠️ Invalid JSON received:', err);
+      ws.close(1003, 'Invalid JSON'); // 1003 = unsupported data
+      return;
     }
     
-    const success = server.upgrade(req);
-    if (!success) {
-      return new Response("Not a valid WebSocket request", { status: 400 });
+    // Handle the session message
+    if (session) {
+      session.onMessage(message);
+    } else {
+      console.warn('⚠️ Received message for unknown session');
+      ws.close(1008, 'Unknown session'); // 1008 = policy violation
     }
-
-    return new Response(null, { status: 101 });
-  },
-  websocket: {
-    async message(ws, msg: string | Buffer) {
-      let message: any;
-
-      // Normalize and safely parse JSON
-      try {
-        const msgStr = Buffer.isBuffer(msg) ? msg.toString('utf8') : msg;
-        message = JSON.parse(msgStr);
-      } catch (err) {
-        console.warn('⚠️ Invalid JSON received:', err);
-        ws.close(1003, 'Invalid JSON'); // 1003 = unsupported data
-        return;
-      }
-
-      // Now handle the session
-      const session = sessionManager.getSessionByWs(ws);
-      if (session) {
-        session.onMessage(message);
-      } else {
-        console.warn("⚠️ Received message for unknown session");
-        ws.close(1008, "Unknown session"); // 1008 = policy violation
-      }
-    },
-
-    open(ws) {
-      console.log("Client connected");
-      const session = sessionManager.createSession(ws);
-    },
-
-    close(ws, code, reason) {
-      console.log("Client disconnected");
-      sessionManager.removeSession(sessionManager.getSessionByWs(ws)!);
-    }
-  },
-  port: 8080,
+  });
+  
+  ws.on('close', () => {
+    console.log('Client disconnected');
+    void session.onClose();
+  });
+  
+  ws.on('error', (err: Error) => {
+    console.error('WebSocket error:', err);
+    void session.onClose();
+  });
 });
