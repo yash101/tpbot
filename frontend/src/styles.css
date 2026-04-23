@@ -50,11 +50,11 @@
 
 @layer components {
   .page {
-    @apply mx-auto w-full max-w-[920px] px-[18px] py-8;
+    @apply mx-auto w-full max-w-230 px-4.5 py-8;
   }
 
   .narrow {
-    @apply grid min-h-screen max-w-[460px] place-items-center;
+    @apply grid min-h-screen max-w-115 place-items-center;
   }
 
   .top {

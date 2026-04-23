@@ -110,7 +110,7 @@ export function TopNav() {
   const { slots } = useTopNavSlotsContext();
 
   return (
-    <header id="top-nav" className="flex w-full justify-between">
+    <header id="top-nav" className="flex w-full justify-between pt-2 pb-2 px-[1em] border-b-blue-950">
       <div className="flex items-center gap-2">{slots.left}</div>
       <div className="flex items-center justify-center gap-2">{slots.center}</div>
       <div className="flex items-center justify-end gap-2">{slots.right}</div>

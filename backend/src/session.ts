@@ -132,6 +132,35 @@ export class SessionManager {
 
     return Object.values(robots);
   }
+
+  public getRobotEndpointSessionIds(robotUserId: number): { controllerSessionId: number; videoSessionId: number } {
+    const sessions = this.getSessionByUserId(robotUserId)?.filter(s => isRobot(s.context.activeRole)) ?? [];
+
+    return {
+      controllerSessionId: sessions.find(s => s.context.activeRole === ActiveUserRole.ROBOT_CONTROLLER)?.sessionId ?? -1,
+      videoSessionId: sessions.find(s => s.context.activeRole === ActiveUserRole.ROBOT_VIDEO)?.sessionId ?? -1,
+    };
+  }
+
+  public async notifyRobotControllerOfSessionIds(robotUserId: number): Promise<void> {
+    const ownerSessionId = this.robotsInUse.get(robotUserId);
+    if (ownerSessionId === undefined) return;
+
+    const ownerSession = this.getSessionBySessionId(ownerSessionId);
+    if (!ownerSession || !isUser(ownerSession.context.activeRole)) return;
+
+    const robotName = this.getSessionByUserId(robotUserId)?.[0]?.context?.user?.name ?? '(unknown robot)';
+    const { controllerSessionId, videoSessionId } = this.getRobotEndpointSessionIds(robotUserId);
+
+    ownerSession.sendMessage<RobotSuccessfullyAcquiredResponse>({
+      type: MessageType.ROBOT_ACQUIRE_RESPONSE,
+      timestamp: Date.now(),
+      robotUserId,
+      controllerSessionId,
+      videoSessionId,
+      name: robotName,
+    });
+  }
 }
 
 export class Session {
@@ -208,6 +237,12 @@ export class Session {
     this.context.activeRole = activeRole;
     this.sessionManager.getSessionByUserId(user.id)?.push(this) ??
       this.sessionManager.sessionsByUserIdMap.set(user.id, [this]);
+
+    if (isRobot(activeRole)) {
+      this.sessionManager
+        .notifyRobotControllerOfSessionIds(user.id)
+        .catch(err => console.warn('⚠️ Failed to notify controlling user of robot session ids:', err));
+    }
 
     return this.sendMessage<AuthSuccessResponse>({
       type: MessageType.AUTH_SUCCESS,
@@ -289,8 +324,8 @@ export class Session {
       type: MessageType.ROBOT_ACQUIRE_RESPONSE,
       timestamp: Date.now(),
       robotUserId: request.robotUserId,
-      controllerSessionId: sessions?.find(s => s.context.activeRole === ActiveUserRole.ROBOT_CONTROLLER)?.sessionId ?? -1,
-      videoSessionId: sessions?.find(s => s.context.activeRole === ActiveUserRole.ROBOT_VIDEO)?.sessionId ?? -1,
+      ...this.sessionManager.getRobotEndpointSessionIds(request.robotUserId),
+      name: sessions[0]?.context?.user?.name ?? '(unknown robot)'
     });
   }
 

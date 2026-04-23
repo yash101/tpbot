@@ -14,6 +14,7 @@ import { TopNavProvider } from "./components/TopNav";
 import { initialWebsocketApiState, reduce, WebsocketApiState } from "./reducer/websocket-api-reducer";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { HomePage } from "./page/home";
+import { Control } from "./page/Control";
 
 export function App() {
   return (
@@ -38,7 +39,7 @@ export function Router() {
         <Route path="/login" element={<LoginScreen state={appState} />} />
         <Route path="/bot" element={null} />
         <Route path="/list-bots" element={<RobotList state={appState} />} />
-        <Route path="/control" element={null} />
+        <Route path="/control" element={<Control state={appState} />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,5 +1,5 @@
 import { useWebsocketApi, useSignal } from "../service/websocket-api.provider";
-import { MessageType, RobotAcquireRequest, RobotListRequest, RobotListResponse, RobotSuccessfullyAcquiredResponse } from "../api/websocket-api.protocol";
+import { MessageType, RobotAcquireRequest, RobotListRequest, RobotListResponse } from "../api/websocket-api.protocol";
 import { TopNav, TopNavLeft, TopNavRight } from "../components/TopNav";
 import { WebsocketApiState } from "../reducer/websocket-api-reducer";
 import { useEffect, useRef } from "react";
@@ -41,6 +41,7 @@ export function RobotList(props: RobotListProps) {
       <TopNav />
       <div className="page">
         <section className="panel">
+          <h1>Connected Robots</h1>
           {robotList.length === 0 ? (
             <p className="muted">No robots are connected.</p>
           ) : (

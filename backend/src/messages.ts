@@ -78,6 +78,7 @@ export interface RobotSuccessfullyAcquiredResponse extends Message {
   robotUserId: number;
   controllerSessionId: number;
   videoSessionId: number;
+  name: string;
 }
 
 export interface RobotAcquireFailureResponse extends ErrorMessage {
