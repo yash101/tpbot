@@ -90,7 +90,9 @@ export function AVMediaSettings({
       </section>
     </div>
   );
-}export function AVSettingsSelect({
+}
+
+export function AVSettingsSelect({
   label, value, onChange, devices, placeholder,
 }: {
   label: string;

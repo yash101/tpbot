@@ -4,7 +4,7 @@ import { SessionManager } from "./session.js";
 const sessionManager: SessionManager = new SessionManager();
 
 // Create WebSocket server listening on port 8080
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ port: 8080, host: '0.0.0.0' });
 
 console.log('WebSocket server listening on port 8080');
 

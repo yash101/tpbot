@@ -11,7 +11,7 @@ export function WebsocketApiProvider({
   const wsApiClientRef = useRef<WebsocketApiClient | null>(null);
   
   if (!wsApiClientRef.current) {
-    wsApiClientRef.current = new WebsocketApiClient(import.meta.env.VITE_REALTIME_URL || 'ws://localhost:8080');
+    wsApiClientRef.current = new WebsocketApiClient(import.meta.env.VITE_REALTIME_URL || 'ws://10.0.127.65:8080');
   }
   
   useEffect(() => {
