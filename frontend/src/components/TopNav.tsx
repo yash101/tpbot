@@ -1,4 +1,6 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useSettings } from "../service/settings.provider";
+import { Cog, X } from "lucide-react";
 
 type TopNavSlot = "left" | "center" | "right";
 
@@ -108,13 +110,27 @@ function TopNavSlotRegistration({
 
 export function TopNav() {
   const { slots } = useTopNavSlotsContext();
+  const settings = useSettings();
 
   return (
-    <header id="top-nav" className="flex w-full justify-between pt-2 pb-2 px-[1em] border-b-blue-950">
-      <div className="flex items-center gap-2">{slots.left}</div>
-      <div className="flex items-center justify-center gap-2">{slots.center}</div>
-      <div className="flex items-center justify-end gap-2">{slots.right}</div>
-    </header>
+    <>
+      <div className="w-full h-12 bg-transparent py-2" />
+      <header id="top-nav" className="fixed top-0 left-0 right-0 z-20 flex w-full justify-between py-2 px-[1em] border-b-blue-950">
+        <div className="flex items-center gap-2">{slots.left}</div>
+        <div className="flex items-center justify-center gap-2">{slots.center}</div>
+        <div className="flex items-center justify-end gap-2">
+          {slots.right}
+          {settings.items.length > 0 &&
+            <button
+              className="topnav-button p-1 bg-transparent border-0 text-[#e8edf2]"
+              onClick={() => settings.isOpen ? settings.close() : settings.open()}
+            >
+              {settings.isOpen ? <X /> : <Cog />}
+            </button>
+          }
+        </div>
+      </header>
+    </>
   );
 }
 

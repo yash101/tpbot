@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 import { authenticateUser, updateUser } from "./db.js";
 import { ActiveUserRole, activeRoleForClientKind, isRobot, isUser, StoredUserRole, ClientKind } from "./user.js";
-import { AuthFailureResponse, AuthRequest, AuthSuccessResponse, CurrentStateMessage, ErrorMessage, ForwardMessageToRobotRequest, Message, MessageType, Robot, RobotAcquireFailureResponse, RobotAcquireRequest, RobotListRequest, RobotListResponse, RobotReleaseRequest, RobotReleaseResponse, RobotStolenByAnotherUserMessage, RobotSuccessfullyAcquiredResponse, SignalP2PAnswerRequest, SignalP2PIceCandidateRequest, SignalP2POfferRequest, SignalP2PPeerDisconnectedMessage } from './messages.js';
+import { AuthFailureResponse, AuthRequest, AuthSuccessResponse, CurrentStateMessage, ErrorMessage, ForwardMessageToRobotRequest, Message, MessageType, Robot, RobotAcquireFailureResponse, RobotAcquireRequest, RobotListRequest, RobotListResponse, RobotPeerAssignedMessage, RobotReleaseRequest, RobotReleaseResponse, RobotStolenByAnotherUserMessage, RobotSuccessfullyAcquiredResponse, SignalP2PAnswerRequest, SignalP2PIceCandidateRequest, SignalP2POfferRequest, SignalP2PPeerDisconnectedMessage, SignalP2PPeerReady } from './messages.js';
 
 export class SessionManager {
   public nextSessionId: number = 69;
@@ -161,6 +161,26 @@ export class SessionManager {
       name: robotName,
     });
   }
+
+  public async notifyRobotVideoOfAssignedPeer(robotUserId: number): Promise<void> {
+    const ownerSessionId = this.robotsInUse.get(robotUserId);
+    if (ownerSessionId === undefined) return;
+
+    const { videoSessionId } = this.getRobotEndpointSessionIds(robotUserId);
+    if (videoSessionId < 0) return;
+
+    const videoSession = this.getSessionBySessionId(videoSessionId);
+    if (!videoSession || videoSession.context.activeRole !== ActiveUserRole.ROBOT_VIDEO) return;
+
+    const robotName = this.getSessionByUserId(robotUserId)?.[0]?.context?.user?.name ?? '(unknown robot)';
+    await videoSession.sendMessage<RobotPeerAssignedMessage>({
+      type: MessageType.ROBOT_PEER_ASSIGNED,
+      timestamp: Date.now(),
+      robotUserId,
+      peerSessionId: ownerSessionId,
+      name: robotName,
+    });
+  }
 }
 
 export class Session {
@@ -196,6 +216,8 @@ export class Session {
         return this.signalP2PAnswer(message as SignalP2PAnswerRequest);
       case MessageType.SIGNAL_P2PICECANDIDATE_REQUEST:
         return this.signalP2PICECandidate(message as SignalP2PIceCandidateRequest);
+      case MessageType.SIGNAL_PEER_READY:
+        return this.signalP2PPeerReady(message as SignalP2PPeerReady);
       default:
         return this.sendMessage<ErrorMessage>({
           type: MessageType.ERROR,
@@ -242,6 +264,9 @@ export class Session {
       this.sessionManager
         .notifyRobotControllerOfSessionIds(user.id)
         .catch(err => console.warn('⚠️ Failed to notify controlling user of robot session ids:', err));
+      this.sessionManager
+        .notifyRobotVideoOfAssignedPeer(user.id)
+        .catch(err => console.warn('⚠️ Failed to notify robot video session of assigned peer:', err));
     }
 
     return this.sendMessage<AuthSuccessResponse>({
@@ -319,6 +344,10 @@ export class Session {
     }
 
     this.sessionManager.robotsInUse.set(request.robotUserId, this.sessionId);
+
+    this.sessionManager
+      .notifyRobotVideoOfAssignedPeer(request.robotUserId)
+      .catch(err => console.warn('⚠️ Failed to notify robot video session of assigned peer:', err));
 
     return this.sendMessage<RobotSuccessfullyAcquiredResponse>({
       type: MessageType.ROBOT_ACQUIRE_RESPONSE,
@@ -453,6 +482,32 @@ export class Session {
       timestamp: Date.now(),
       targetId: this.sessionId,
       candidate: request.candidate,
+    });
+  }
+
+  async signalP2PPeerReady(request: SignalP2PPeerReady): Promise<void> {
+    // auth guard
+    if (!this.context.user) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Unauthorized',
+      });
+    }
+
+    const targetSession = this.sessionManager.getSessionBySessionId(request.targetId);
+    if (!targetSession || !this.sessionManager.isAuthorizedP2PSignal(this, targetSession)) {
+      return this.sendMessage<ErrorMessage>({
+        type: MessageType.ERROR,
+        timestamp: Date.now(),
+        error: 'Invalid or unauthorized signaling target',
+      });
+    }
+
+    return targetSession.sendMessage<SignalP2PPeerReady>({
+      type: MessageType.SIGNAL_PEER_READY,
+      timestamp: Date.now(),
+      targetId: this.sessionId,
     });
   }
 

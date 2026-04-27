@@ -78,6 +78,8 @@ function _reduce(s: WebsocketApiState, a: Message): WebsocketApiState {
     case MessageType.SIGNAL_P2PANSWER_REQUEST:
     case MessageType.SIGNAL_P2PICECANDIDATE_REQUEST:
     case MessageType.SIGNAL_PEER_DISCONNECTED:
+    case MessageType.SIGNAL_PEER_READY:
+    case MessageType.ROBOT_PEER_ASSIGNED:
       return s; // these messages are handled by individual components that subscribe to them, so we don't need to do anything here
 
     default:

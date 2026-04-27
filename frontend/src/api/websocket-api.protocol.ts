@@ -9,6 +9,7 @@ import {
   type Message,
   type Robot,
   type RobotAcquireFailureResponse,
+  type RobotPeerAssignedMessage,
   type RobotAcquireRequest,
   type RobotListRequest,
   type RobotListResponse,
@@ -20,6 +21,7 @@ import {
   type SignalP2PIceCandidateRequest,
   type SignalP2POfferRequest,
   type SignalP2PPeerDisconnectedMessage,
+  type SignalP2PPeerReady,
 } from "../../../backend/src/messages"
 
 export { ActiveUserRole, ClientKind, MessageType }
@@ -32,6 +34,7 @@ export type {
   Message,
   Robot,
   RobotAcquireFailureResponse,
+  RobotPeerAssignedMessage,
   RobotAcquireRequest,
   RobotListRequest,
   RobotListResponse,
@@ -43,6 +46,7 @@ export type {
   SignalP2PIceCandidateRequest,
   SignalP2POfferRequest,
   SignalP2PPeerDisconnectedMessage,
+  SignalP2PPeerReady,
 }
 
 export type ClientMessage =
@@ -61,12 +65,14 @@ export type ServerMessage =
   | RobotListResponse
   | RobotSuccessfullyAcquiredResponse
   | RobotAcquireFailureResponse
+  | RobotPeerAssignedMessage
   | RobotReleaseResponse
   | RobotStolenByAnotherUserMessage
   | SignalP2POfferRequest
   | SignalP2PAnswerRequest
   | SignalP2PIceCandidateRequest
   | SignalP2PPeerDisconnectedMessage
+  | SignalP2PPeerReady
   | ErrorMessage
 
 export type ProtocolMessage = ClientMessage | ServerMessage | Message

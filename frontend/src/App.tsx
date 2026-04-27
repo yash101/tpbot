@@ -15,13 +15,18 @@ import { initialWebsocketApiState, reduce, WebsocketApiState } from "./reducer/w
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { HomePage } from "./page/home";
 import { Control } from "./page/Control";
+import { BotPage } from "./page/Bot";
+import { SettingsProvider } from "./service/settings.provider";
+import { SettingsPane } from "./components/settings.component";
 
 export function App() {
   return (
     <WebsocketApiProvider>
-      <TopNavProvider>
-        <Router />
-      </TopNavProvider>
+      <SettingsProvider>
+        <TopNavProvider>
+          <Router />
+        </TopNavProvider>
+      </SettingsProvider>
     </WebsocketApiProvider>
   );
 }
@@ -34,10 +39,11 @@ export function Router() {
 
   return (
     <BrowserRouter>
+      <SettingsPane />
       <Routes>
         <Route path="/" element={<HomePage state={appState} />} />
         <Route path="/login" element={<LoginScreen state={appState} />} />
-        <Route path="/bot" element={null} />
+        <Route path="/bot" element={<BotPage state={appState} />} />
         <Route path="/list-bots" element={<RobotList state={appState} />} />
         <Route path="/control" element={<Control state={appState} />} />
       </Routes>

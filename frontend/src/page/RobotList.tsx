@@ -10,18 +10,20 @@ export interface RobotListProps {
   state: WebsocketApiState
 }
 
-export function RobotList(props: RobotListProps) {
+export function RobotList({ state }: RobotListProps) {
   const nav = useNavigate();
   const wsApi = useWebsocketApi();
   const robots = useSignal(wsApi.getSignal<RobotListResponse>(MessageType.ROBOT_LIST_RESPONSE));
-  const interval = useInterval(() => {
+  useInterval(() => {
     wsApi.send<RobotListRequest>({
       type: MessageType.ROBOT_LIST_REQUEST,
     });
   }, 2000);
 
-  if (!props.state.authenticated) nav('/login');
-  if (props.state.hasRobotControl) nav('/control');
+  useEffect(() => {
+    if (!state.authenticated) nav('/login');
+    if (state.hasRobotControl) nav('/control');
+  }, [state]);
 
   const robotList = robots?.robots ?? [];
 

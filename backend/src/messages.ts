@@ -14,11 +14,13 @@ export enum MessageType {
   ROBOT_RELEASE_REQUEST = 'robot_release_request',
   ROBOT_RELEASE_RESPONSE = 'robot_release_response',
   ROBOT_STOLEN_MESSAGE = 'robot_stolen_message',
+  ROBOT_PEER_ASSIGNED = 'robot_peer_assigned',
   FORWARD_MESSAGE_TO_ROBOT_REQUEST = 'forward_message_to_robot_request',
   SIGNAL_P2POFFER_REQUEST = 'signal.p2poffer_request',
   SIGNAL_P2PANSWER_REQUEST = 'signal.p2panswer_request',
   SIGNAL_P2PICECANDIDATE_REQUEST = 'signal.p2picecandidate_request',
   SIGNAL_PEER_DISCONNECTED = 'signal.peer_disconnected',
+  SIGNAL_PEER_READY = 'signal.peer_ready',
 }
 
 export interface Robot {
@@ -85,6 +87,13 @@ export interface RobotAcquireFailureResponse extends ErrorMessage {
   type: MessageType.ROBOT_ACQUIRE_RESPONSE;
 }
 
+export interface RobotPeerAssignedMessage extends Message {
+  type: MessageType.ROBOT_PEER_ASSIGNED;
+  robotUserId: number;
+  peerSessionId: number;
+  name: string;
+}
+
 export interface RobotReleaseRequest extends Message {
   type: MessageType.ROBOT_RELEASE_REQUEST;
   robotUserId: number;
@@ -137,4 +146,9 @@ export interface CurrentStateMessage extends Message {
   userName?: string;
   userRole?: ActiveUserRole;
   robotUserId?: number;
+}
+
+export interface SignalP2PPeerReady extends Message {
+  type: MessageType.SIGNAL_PEER_READY;
+  targetId: number;
 }
